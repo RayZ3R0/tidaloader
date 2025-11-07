@@ -282,20 +282,12 @@ async def write_metadata_tags(filepath: Path, metadata: dict):
                     # Prefer synced lyrics (LRC format)
                     if lyrics_result.synced_lyrics:
                         audio['LYRICS'] = lyrics_result.synced_lyrics
+                        # Store synced lyrics in metadata for later saving
+                        metadata['synced_lyrics'] = lyrics_result.synced_lyrics
                         print(f"  ✓ Added synced lyrics (LRC format)")
                     elif lyrics_result.plain_lyrics:
                         audio['LYRICS'] = lyrics_result.plain_lyrics
                         print(f"  ✓ Added plain lyrics")
-                    
-                    # Also save lyrics to separate .lrc file for players that support it
-                    if lyrics_result.synced_lyrics:
-                        lrc_path = filepath.with_suffix('.lrc')
-                        try:
-                            with open(lrc_path, 'w', encoding='utf-8') as f:
-                                f.write(lyrics_result.synced_lyrics)
-                            print(f"  ✓ Saved synced lyrics to .lrc file")
-                        except Exception as e:
-                            print(f"  ⚠️  Failed to save .lrc file: {e}")
                     
             except Exception as e:
                 print(f"  ⚠️  Failed to fetch lyrics: {e}")
@@ -381,6 +373,10 @@ async def organize_file_by_metadata(temp_filepath: Path, metadata: dict) -> Path
             # Delete the temp file since final file already exists
             if temp_filepath.exists() and temp_filepath != final_path:
                 temp_filepath.unlink()
+                # Also clean up temp .lrc file if it exists
+                temp_lrc = temp_filepath.with_suffix('.lrc')
+                if temp_lrc.exists():
+                    temp_lrc.unlink()
             return final_path
         
         # Move file to organized location
@@ -388,6 +384,23 @@ async def organize_file_by_metadata(temp_filepath: Path, metadata: dict) -> Path
             import shutil
             shutil.move(str(temp_filepath), str(final_path))
             print(f"  ✓ Organized to: {artist_folder}/{album_folder}/{filename}")
+            
+            # Move .lrc file if it exists (from temp location)
+            temp_lrc_path = temp_filepath.with_suffix('.lrc')
+            if temp_lrc_path.exists():
+                final_lrc_path = final_path.with_suffix('.lrc')
+                shutil.move(str(temp_lrc_path), str(final_lrc_path))
+                print(f"  ✓ Moved .lrc file to organized location")
+        
+        # Save synced lyrics to .lrc file in final location
+        if metadata.get('synced_lyrics'):
+            lrc_path = final_path.with_suffix('.lrc')
+            try:
+                with open(lrc_path, 'w', encoding='utf-8') as f:
+                    f.write(metadata['synced_lyrics'])
+                print(f"  ✓ Saved synced lyrics to .lrc file")
+            except Exception as e:
+                print(f"  ⚠️  Failed to save .lrc file: {e}")
         
         return final_path
         
