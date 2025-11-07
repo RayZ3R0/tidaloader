@@ -1,8 +1,7 @@
-"""
-FastAPI backend for Troi Tidal Downloader
-"""
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 from typing import List, Optional
 import sys
@@ -11,17 +10,11 @@ import time
 import aiofiles
 import re
 import requests
-from fastapi.responses import StreamingResponse
 import asyncio
 from contextlib import asynccontextmanager
 import json
 import aiohttp
-from fastapi import BackgroundTasks
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 
-
-# Add parent directory to path
 sys.path.append(str(Path(__file__).parent.parent))
 
 from tidal_client import TidalAPIClient
@@ -29,7 +22,6 @@ from troi_integration import TroiIntegration, TroiTrack
 
 app = FastAPI(title="Troi Tidal Downloader API")
 
-# CORS for frontend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://localhost:3000"],
@@ -38,10 +30,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize Tidal client
 tidal_client = TidalAPIClient()
 
-# Request/Response Models
 class TroiGenerateRequest(BaseModel):
     username: str
     playlist_type: str = "periodic-jams"
@@ -63,29 +53,23 @@ class TroiTrackResponse(BaseModel):
     tidal_exists: bool
     album: Optional[str]
 
-# Add request model at top with other models
 class DownloadTrackRequest(BaseModel):
     track_id: int
     artist: str
     title: str
     quality: str = "LOSSLESS"
 
-# Helper function to extract items from API response
+DOWNLOAD_DIR = Path(__file__).parent.parent / "downloads"
+DOWNLOAD_DIR.mkdir(exist_ok=True)
+
+active_downloads = {}
+
 def extract_items(result, key: str) -> List:
-    """
-    Extract items from API response, handling different formats.
-    The API can return:
-    - List with dict containing nested data: [{'artists': {'items': [...]}}]
-    - Dict with nested structure: {'artists': {'items': [...]}}
-    - Direct list: [...]
-    """
     if not result:
         return []
     
-    # If it's a list, check if first element contains our data
     if isinstance(result, list):
         if len(result) > 0 and isinstance(result[0], dict):
-            # Try to extract from first element
             first_elem = result[0]
             if key in first_elem:
                 nested = first_elem[key]
@@ -93,31 +77,22 @@ def extract_items(result, key: str) -> List:
                     return nested['items']
                 elif isinstance(nested, list):
                     return nested
-        # Otherwise treat as direct list
         return result
     
-    # If it's a dict
     if isinstance(result, dict):
-        # Try nested structure first (e.g., artists.items)
         if key in result and isinstance(result[key], dict):
             return result[key].get('items', [])
         
-        # Try direct items
         if 'items' in result:
             return result['items']
     
     return []
 
 def extract_track_data(track_response) -> List:
-    """
-    Extract track data from album API response.
-    The API returns: [album_metadata, {'items': [tracks]}]
-    """
     if not track_response:
         return []
     
     if isinstance(track_response, list):
-        # Look for the dict with 'items' key
         for item in track_response:
             if isinstance(item, dict) and 'items' in item:
                 return item['items']
@@ -128,16 +103,116 @@ def extract_track_data(track_response) -> List:
     
     return []
 
-# Routes
-@app.get("/")
-async def root():
+def extract_stream_url(track_data) -> Optional[str]:
+    if isinstance(track_data, list):
+        entries = track_data
+    else:
+        entries = [track_data]
+    
+    for entry in entries:
+        if isinstance(entry, dict) and 'OriginalTrackUrl' in entry:
+            return entry['OriginalTrackUrl']
+    
+    for entry in entries:
+        if isinstance(entry, dict) and 'manifest' in entry:
+            manifest = entry['manifest']
+            try:
+                import base64
+                decoded = base64.b64decode(manifest).decode('utf-8')
+                
+                try:
+                    import json
+                    manifest_json = json.loads(decoded)
+                    if 'urls' in manifest_json and manifest_json['urls']:
+                        return manifest_json['urls'][0]
+                except json.JSONDecodeError:
+                    pass
+                
+                import re
+                url_match = re.search(r'https?://[^\s"]+', decoded)
+                if url_match:
+                    return url_match.group(0)
+            except Exception as e:
+                print(f"Failed to decode manifest: {e}")
+    
+    return None
+
+async def download_file_async(track_id: int, stream_url: str, filepath: Path, filename: str):
+    try:
+        print(f"[3/3] Downloading {filename}...")
+        
+        if track_id not in active_downloads:
+            active_downloads[track_id] = {'progress': 0, 'status': 'downloading'}
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.get(stream_url, timeout=aiohttp.ClientTimeout(total=300)) as response:
+                if response.status != 200:
+                    error_msg = f"HTTP {response.status}"
+                    print(f"✗ Download failed: {error_msg}")
+                    if track_id in active_downloads:
+                        active_downloads[track_id] = {'progress': 0, 'status': 'failed'}
+                        await asyncio.sleep(2)
+                        del active_downloads[track_id]
+                    return
+                
+                total_size = int(response.headers.get('content-length', 0))
+                downloaded = 0
+                
+                with open(filepath, 'wb') as f:
+                    async for chunk in response.content.iter_chunked(8192):
+                        if chunk:
+                            f.write(chunk)
+                            downloaded += len(chunk)
+                            
+                            if total_size > 0:
+                                progress = int((downloaded / total_size) * 100)
+                                active_downloads[track_id] = {
+                                    'progress': progress,
+                                    'status': 'downloading'
+                                }
+                                print(f"  Progress: {progress}%", end='\r')
+                            
+                            await asyncio.sleep(0.01)
+        
+        active_downloads[track_id] = {
+            'progress': 100,
+            'status': 'completed'
+        }
+        
+        file_size_mb = filepath.stat().st_size / 1024 / 1024
+        print(f"\n✓ Downloaded: {filename} ({file_size_mb:.2f} MB)")
+        print(f"  Location: {filepath}")
+        print(f"{'='*60}\n")
+        
+        await asyncio.sleep(2)
+        
+        if track_id in active_downloads:
+            del active_downloads[track_id]
+        
+    except Exception as e:
+        print(f"✗ Download error: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        if track_id in active_downloads:
+            active_downloads[track_id] = {'progress': 0, 'status': 'failed'}
+            await asyncio.sleep(2)
+            del active_downloads[track_id]
+        
+        if filepath.exists():
+            try:
+                filepath.unlink()
+                print(f"  Cleaned up partial file: {filename}")
+            except Exception:
+                pass
+
+@app.get("/api")
+async def api_root():
     return {"status": "ok", "message": "Troi Tidal Downloader API"}
 
 @app.post("/api/troi/generate")
 async def generate_troi_playlist(request: TroiGenerateRequest):
-    """Generate Troi playlist and validate tracks on Tidal"""
     try:
-        # Generate playlist
         print(f"Generating Troi playlist for {request.username}...")
         tracks = TroiIntegration.generate_playlist(
             request.username,
@@ -145,17 +220,14 @@ async def generate_troi_playlist(request: TroiGenerateRequest):
         )
         print(f"Generated {len(tracks)} tracks from Troi")
         
-        # Validate each track on Tidal
         validated_tracks = []
         for i, track in enumerate(tracks, 1):
             print(f"[{i}/{len(tracks)}] Validating: {track.artist} - {track.title}")
             
-            # Search on Tidal
             query = f"{track.artist} {track.title}"
             result = tidal_client.search_tracks(query)
             
             if result:
-                # Extract tracks from response
                 tidal_tracks = extract_items(result, 'tracks')
                 
                 if tidal_tracks and len(tidal_tracks) > 0:
@@ -163,7 +235,6 @@ async def generate_troi_playlist(request: TroiGenerateRequest):
                     track.tidal_id = first_track.get('id')
                     track.tidal_exists = True
                     
-                    # Get album info
                     album_data = first_track.get('album', {})
                     track.album = album_data.get('title') if isinstance(album_data, dict) else None
                     
@@ -182,7 +253,6 @@ async def generate_troi_playlist(request: TroiGenerateRequest):
                 album=track.album
             ))
             
-            # Rate limit protection
             time.sleep(0.1)
         
         found_count = sum(1 for t in validated_tracks if t.tidal_exists)
@@ -202,14 +272,12 @@ async def generate_troi_playlist(request: TroiGenerateRequest):
 
 @app.get("/api/search/tracks")
 async def search_tracks(q: str):
-    """Search for tracks on Tidal"""
     try:
         result = tidal_client.search_tracks(q)
         
         if not result:
             return {"items": []}
         
-        # Extract tracks from response
         tracks = extract_items(result, 'tracks')
         
         return {
@@ -234,14 +302,12 @@ async def search_tracks(q: str):
 
 @app.get("/api/search/albums")
 async def search_albums(q: str):
-    """Search for albums on Tidal"""
     try:
         result = tidal_client.search_albums(q)
         
         if not result:
             return {"items": []}
         
-        # Extract albums from response
         albums = extract_items(result, 'albums')
         
         return {"items": albums}
@@ -253,7 +319,6 @@ async def search_albums(q: str):
 
 @app.get("/api/search/artists")
 async def search_artists(q: str):
-    """Search for artists on Tidal"""
     try:
         print(f"Searching for artist: {q}")
         result = tidal_client.search_artists(q)
@@ -264,7 +329,6 @@ async def search_artists(q: str):
         
         print(f"API response type: {type(result)}")
         
-        # Extract artists from response
         artists = extract_items(result, 'artists')
         
         print(f"Found {len(artists)} artists")
@@ -280,7 +344,6 @@ async def search_artists(q: str):
 
 @app.get("/api/album/{album_id}/tracks")
 async def get_album_tracks(album_id: int):
-    """Get tracks for an album"""
     try:
         print(f"Fetching tracks for album {album_id}...")
         result = tidal_client.get_album(album_id)
@@ -290,18 +353,14 @@ async def get_album_tracks(album_id: int):
         
         print(f"Album API response type: {type(result)}")
         
-        # Extract album metadata and tracks from response
-        # API returns: [album_metadata, {'items': [track_wrappers]}]
         album_metadata = None
         raw_items = []
         
         if isinstance(result, list):
-            # First element should be album metadata
             if len(result) > 0 and isinstance(result[0], dict):
                 if 'title' in result[0] and 'id' in result[0]:
                     album_metadata = result[0]
             
-            # Look for tracks in subsequent elements
             for item in result:
                 if isinstance(item, dict) and 'items' in item:
                     raw_items = item['items']
@@ -309,31 +368,26 @@ async def get_album_tracks(album_id: int):
         elif isinstance(result, dict):
             if 'items' in result:
                 raw_items = result['items']
-            # Check if the dict itself is album metadata
             if 'title' in result and 'id' in result:
                 album_metadata = result
         
         print(f"Found album metadata: {album_metadata is not None}")
         print(f"Found {len(raw_items)} raw items")
         
-        # Extract actual tracks from wrapper objects
         tracks = []
         for raw_item in raw_items:
             if not raw_item or not isinstance(raw_item, dict):
                 continue
             
-            # Check if track data is nested under 'item' key
             track_data = raw_item.get('item', raw_item)
             
             if not isinstance(track_data, dict):
                 continue
             
-            # Enrich track with album metadata if available
             if album_metadata:
                 if 'album' not in track_data or not track_data['album']:
                     track_data['album'] = album_metadata
                 elif isinstance(track_data.get('album'), dict):
-                    # Merge album metadata to ensure complete data
                     track_data['album'] = {
                         **album_metadata,
                         **track_data['album']
@@ -343,7 +397,6 @@ async def get_album_tracks(album_id: int):
         
         print(f"Extracted {len(tracks)} tracks")
         
-        # Build response with error handling
         track_results = []
         for track in tracks:
             try:
@@ -352,7 +405,6 @@ async def get_album_tracks(album_id: int):
                     print(f"Warning: Track missing ID: {track.get('title', 'Unknown')}")
                     continue
                 
-                # Handle artist data
                 artist_name = "Unknown"
                 if 'artist' in track:
                     if isinstance(track['artist'], dict):
@@ -364,7 +416,6 @@ async def get_album_tracks(album_id: int):
                     if isinstance(first_artist, dict):
                         artist_name = first_artist.get('name', 'Unknown')
                 
-                # Handle album data - use enriched album metadata
                 album_dict = track.get('album')
                 if isinstance(album_dict, dict):
                     album_title = album_dict.get('title')
@@ -388,10 +439,8 @@ async def get_album_tracks(album_id: int):
         
         print(f"Successfully processed {len(track_results)} tracks")
         
-        # Return tracks with album metadata
         response_data = {"items": track_results}
         
-        # Include album metadata if we found it
         if album_metadata:
             response_data["album"] = {
                 "id": album_metadata.get('id'),
@@ -414,335 +463,8 @@ async def get_album_tracks(album_id: int):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/download/start")
-async def start_download(background_tasks: BackgroundTasks):
-    """Start processing the download queue"""
-    # TODO: Implement queue processing
-    return {"status": "started"}
-
-@app.get("/api/download/stream/{track_id}")
-async def get_stream_url(track_id: int, quality: str = "LOSSLESS"):
-    """Get stream URL for a track"""
-    try:
-        print(f"Getting stream URL for track {track_id} at {quality} quality...")
-        
-        # Get track data with stream info
-        track_data = tidal_client.get_track(track_id, quality)
-        
-        if not track_data:
-            raise HTTPException(status_code=404, detail="Track not found")
-        
-        # Extract stream URL
-        stream_url = extract_stream_url(track_data)
-        
-        if not stream_url:
-            raise HTTPException(status_code=404, detail="Stream URL not found")
-        
-        print(f"Found stream URL: {stream_url[:50]}...")
-        
-        return {
-            "stream_url": stream_url,
-            "track_id": track_id,
-            "quality": quality
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"Error getting stream URL: {e}")
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
-
-active_downloads = {}  # Track active downloads: {track_id: {'progress': int, 'status': str}}
-
-@app.get("/api/download/progress/{track_id}")
-async def download_progress_stream(track_id: int):
-    """Stream download progress updates via Server-Sent Events"""
-    async def event_generator():
-        """Generate SSE events for download progress"""
-        last_progress = -1
-        no_data_count = 0
-        max_no_data = 10  # 5 seconds (10 * 0.5s)
-        
-        while True:
-            if track_id in active_downloads:
-                download_info = active_downloads[track_id]
-                progress = download_info.get('progress', 0)
-                status = download_info.get('status', 'downloading')
-                
-                # Only send if progress changed
-                if progress != last_progress:
-                    yield f"data: {json.dumps({'progress': progress, 'track_id': track_id, 'status': status})}\n\n"
-                    last_progress = progress
-                    no_data_count = 0
-                
-                # Stop streaming when download completes
-                if progress >= 100 or status == 'completed':
-                    # Send final completion event
-                    yield f"data: {json.dumps({'progress': 100, 'track_id': track_id, 'status': 'completed'})}\n\n"
-                    break
-            else:
-                no_data_count += 1
-                
-                # If track not found for too long, stop
-                if no_data_count >= max_no_data:
-                    yield f"data: {json.dumps({'progress': 0, 'track_id': track_id, 'status': 'not_found'})}\n\n"
-                    break
-            
-            await asyncio.sleep(0.5)  # Update every 500ms
-    
-    return StreamingResponse(
-        event_generator(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no"  # Disable nginx buffering
-        }
-    )
-
-@app.post("/api/download/track")
-async def download_track_server_side(
-    request: DownloadTrackRequest,
-    background_tasks: BackgroundTasks
-):
-    """Download track to server-side music directory"""
-    try:
-        print(f"\n{'='*60}")
-        print(f"Download Request:")
-        print(f"  Track ID: {request.track_id}")
-        print(f"  Artist: {request.artist}")
-        print(f"  Title: {request.title}")
-        print(f"  Quality: {request.quality}")
-        print(f"{'='*60}\n")
-        
-        # Initialize progress tracking with status
-        active_downloads[request.track_id] = {
-            'progress': 0,
-            'status': 'starting'
-        }
-        
-        # Get stream URL
-        print(f"[1/3] Getting stream URL...")
-        track_data = tidal_client.get_track(request.track_id, request.quality)
-        if not track_data:
-            del active_downloads[request.track_id]
-            raise HTTPException(status_code=404, detail="Track not found")
-        
-        stream_url = extract_stream_url(track_data)
-        if not stream_url:
-            del active_downloads[request.track_id]
-            raise HTTPException(status_code=404, detail="Stream URL not found")
-        
-        print(f"✓ Stream URL: {stream_url[:60]}...")
-        
-        # Sanitize filename
-        filename = f"{request.artist} - {request.title}.flac"
-        filename = re.sub(r'[<>:"/\\|?*]', '_', filename)
-        filepath = DOWNLOAD_DIR / filename
-        
-        print(f"\n[2/3] Target file: {filepath}")
-        
-        # Check if already exists
-        if filepath.exists():
-            print(f"⚠️  File already exists, skipping download")
-            del active_downloads[request.track_id]
-            return {
-                "status": "exists",
-                "filename": filename,
-                "path": str(filepath),
-                "message": f"File already exists: {filename}"
-            }
-        
-        # Update status to downloading
-        active_downloads[request.track_id] = {
-            'progress': 0,
-            'status': 'downloading'
-        }
-        
-        # Start download in background task
-        background_tasks.add_task(
-            download_file_async,
-            request.track_id,
-            stream_url,
-            filepath,
-            filename
-        )
-        
-        return {
-            "status": "downloading",
-            "filename": filename,
-            "path": str(filepath),
-            "message": f"Download started: {filename}"
-        }
-        
-    except HTTPException:
-        if request.track_id in active_downloads:
-            del active_downloads[request.track_id]
-        raise
-    except Exception as e:
-        print(f"✗ Download error: {e}")
-        import traceback
-        traceback.print_exc()
-        
-        if request.track_id in active_downloads:
-            del active_downloads[request.track_id]
-        
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-async def download_file_async(track_id: int, stream_url: str, filepath: Path, filename: str):
-    """Download file asynchronously with progress tracking"""
-    try:
-        print(f"[3/3] Downloading {filename}...")
-        
-        # Ensure active_downloads entry exists
-        if track_id not in active_downloads:
-            active_downloads[track_id] = {'progress': 0, 'status': 'downloading'}
-        
-        # Use aiohttp for async download
-        async with aiohttp.ClientSession() as session:
-            async with session.get(stream_url, timeout=aiohttp.ClientTimeout(total=300)) as response:
-                if response.status != 200:
-                    error_msg = f"HTTP {response.status}"
-                    print(f"✗ Download failed: {error_msg}")
-                    if track_id in active_downloads:
-                        active_downloads[track_id] = {'progress': 0, 'status': 'failed'}
-                        await asyncio.sleep(2)  # Keep status for a bit
-                        del active_downloads[track_id]
-                    return
-                
-                total_size = int(response.headers.get('content-length', 0))
-                downloaded = 0
-                
-                with open(filepath, 'wb') as f:
-                    async for chunk in response.content.iter_chunked(8192):
-                        if chunk:
-                            f.write(chunk)
-                            downloaded += len(chunk)
-                            
-                            if total_size > 0:
-                                progress = int((downloaded / total_size) * 100)
-                                active_downloads[track_id] = {
-                                    'progress': progress,
-                                    'status': 'downloading'
-                                }
-                                print(f"  Progress: {progress}%", end='\r')
-                            
-                            # Small delay to allow SSE to send updates
-                            await asyncio.sleep(0.01)
-        
-        # Mark as complete - KEEP in active_downloads for a bit
-        active_downloads[track_id] = {
-            'progress': 100,
-            'status': 'completed'
-        }
-        
-        file_size_mb = filepath.stat().st_size / 1024 / 1024
-        print(f"\n✓ Downloaded: {filename} ({file_size_mb:.2f} MB)")
-        print(f"  Location: {filepath}")
-        print(f"{'='*60}\n")
-        
-        # Keep status for 2 seconds so SSE can send final update
-        await asyncio.sleep(2)
-        
-        # Now safe to remove
-        if track_id in active_downloads:
-            del active_downloads[track_id]
-        
-    except Exception as e:
-        print(f"✗ Download error: {e}")
-        import traceback
-        traceback.print_exc()
-        
-        if track_id in active_downloads:
-            active_downloads[track_id] = {'progress': 0, 'status': 'failed'}
-            await asyncio.sleep(2)
-            del active_downloads[track_id]
-        
-        # Clean up partial file
-        if filepath.exists():
-            try:
-                filepath.unlink()
-                print(f"  Cleaned up partial file: {filename}")
-            except Exception:
-                pass
-
-def extract_stream_url(track_data) -> Optional[str]:
-    """Extract stream URL from track data"""
-    # Handle array response
-    if isinstance(track_data, list):
-        entries = track_data
-    else:
-        entries = [track_data]
-    
-    # Try OriginalTrackUrl first
-    for entry in entries:
-        if isinstance(entry, dict) and 'OriginalTrackUrl' in entry:
-            return entry['OriginalTrackUrl']
-    
-    # Try manifest
-    for entry in entries:
-        if isinstance(entry, dict) and 'manifest' in entry:
-            manifest = entry['manifest']
-            try:
-                import base64
-                decoded = base64.b64decode(manifest).decode('utf-8')
-                
-                # Try JSON parse
-                try:
-                    import json
-                    manifest_json = json.loads(decoded)
-                    if 'urls' in manifest_json and manifest_json['urls']:
-                        return manifest_json['urls'][0]
-                except json.JSONDecodeError:
-                    pass
-                
-                # Try regex
-                import re
-                url_match = re.search(r'https?://[^\s"]+', decoded)
-                if url_match:
-                    return url_match.group(0)
-            except Exception as e:
-                print(f"Failed to decode manifest: {e}")
-    
-    return None
-
-# Add at top
-DOWNLOAD_DIR = Path(__file__).parent.parent / "downloads"
-DOWNLOAD_DIR.mkdir(exist_ok=True)
-
-# Serve frontend static files
-frontend_dist = Path(__file__).parent.parent.parent / "frontend" / "dist"
-
-if frontend_dist.exists():
-    # Serve static assets (JS, CSS, images)
-    app.mount("/assets", StaticFiles(directory=str(frontend_dist / "assets")), name="assets")
-    
-    # Serve index.html for all other routes (SPA)
-    @app.get("/{full_path:path}")
-    async def serve_frontend(full_path: str):
-        # Don't serve frontend for API routes
-        if full_path.startswith("api/"):
-            raise HTTPException(status_code=404, detail="Not found")
-        
-        # Serve index.html for all non-API routes
-        index_file = frontend_dist / "index.html"
-        if index_file.exists():
-            return FileResponse(index_file)
-        
-        raise HTTPException(status_code=404, detail="Frontend not built")
-else:
-    print("Warning: Frontend dist folder not found. Run 'npm run build' in frontend directory.")
-
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
 @app.get("/api/artist/{artist_id}")
 async def get_artist(artist_id: int):
-    """Get artist details with top tracks and albums"""
     try:
         print(f"Fetching artist {artist_id}...")
         result = tidal_client.get_artist(artist_id)
@@ -752,67 +474,56 @@ async def get_artist(artist_id: int):
         
         print(f"Artist API response type: {type(result)}")
         
-        # Parse the complex nested structure
         artist_data = None
         tracks = []
         albums = []
-        visited = set()  # Track visited objects to avoid infinite loops
+        visited = set()
         
         def is_track_like(obj):
-            """Check if object looks like a track"""
             if not isinstance(obj, dict):
                 return False
             return all(key in obj for key in ['id', 'title', 'duration']) and 'album' in obj
         
         def is_album_like(obj):
-            """Check if object looks like an album"""
             if not isinstance(obj, dict):
                 return False
             return all(key in obj for key in ['id', 'title', 'cover'])
         
         def is_artist_like(obj):
-            """Check if object looks like artist metadata"""
             if not isinstance(obj, dict):
                 return False
             return all(key in obj for key in ['id', 'name', 'type'])
         
         def scan_value(value, depth=0):
-            """Recursively scan for tracks and albums"""
-            if depth > 10:  # Prevent infinite recursion
+            if depth > 10:
                 return
             
             if not value:
                 return
             
-            # Handle arrays
             if isinstance(value, list):
                 for item in value:
                     scan_value(item, depth + 1)
                 return
             
-            # Handle objects
             if not isinstance(value, dict):
                 return
             
-            # Avoid revisiting same object
             obj_id = id(value)
             if obj_id in visited:
                 return
             visited.add(obj_id)
             
-            # Check if it's artist metadata
             if is_artist_like(value):
                 nonlocal artist_data
                 if not artist_data:
                     artist_data = value
             
-            # Check for tracks in 'items' array
             if 'items' in value and isinstance(value['items'], list):
                 for item in value['items']:
                     if not isinstance(item, dict):
                         continue
                     
-                    # Handle wrapper objects with 'item' key
                     actual_item = item.get('item', item)
                     
                     if is_track_like(actual_item):
@@ -820,55 +531,44 @@ async def get_artist(artist_id: int):
                     elif is_album_like(actual_item):
                         albums.append(actual_item)
             
-            # Check for modules (contains pagedList with albums)
             if 'modules' in value and isinstance(value['modules'], list):
                 for module in value['modules']:
                     if isinstance(module, dict):
-                        # Check for pagedList
                         if 'pagedList' in module:
                             paged_list = module['pagedList']
                             if isinstance(paged_list, dict):
                                 scan_value(paged_list, depth + 1)
                         
-                        # Also scan the module itself
                         scan_value(module, depth + 1)
             
-            # Recursively scan all values
             for nested_value in value.values():
                 scan_value(nested_value, depth + 1)
         
-        # Start scanning from root
         scan_value(result)
         
-        # Fallback: If no artist data found, try to get from tracks/albums
         if not artist_data:
-            # Try to extract from first track
             if tracks and 'artist' in tracks[0]:
                 artist_obj = tracks[0]['artist']
                 if isinstance(artist_obj, dict):
                     artist_data = artist_obj
             
-            # Try to extract from first album
             elif albums and 'artist' in albums[0]:
                 artist_obj = albums[0]['artist']
                 if isinstance(artist_obj, dict):
                     artist_data = artist_obj
         
-        # Still no artist? Create minimal one
         if not artist_data:
             artist_data = {
                 'id': artist_id,
                 'name': 'Unknown Artist'
             }
         
-        # Sort tracks by popularity (if available)
         tracks_sorted = sorted(
             tracks,
             key=lambda t: t.get('popularity', 0),
             reverse=True
-        )[:50]  # Top 50 tracks
+        )[:50]
         
-        # Sort albums by release date (newest first)
         def get_album_timestamp(album):
             release_date = album.get('releaseDate')
             if not release_date:
@@ -904,4 +604,182 @@ async def get_artist(artist_id: int):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/download/start")
+async def start_download(background_tasks: BackgroundTasks):
+    return {"status": "started"}
+
+@app.get("/api/download/stream/{track_id}")
+async def get_stream_url(track_id: int, quality: str = "LOSSLESS"):
+    try:
+        print(f"Getting stream URL for track {track_id} at {quality} quality...")
         
+        track_data = tidal_client.get_track(track_id, quality)
+        
+        if not track_data:
+            raise HTTPException(status_code=404, detail="Track not found")
+        
+        stream_url = extract_stream_url(track_data)
+        
+        if not stream_url:
+            raise HTTPException(status_code=404, detail="Stream URL not found")
+        
+        print(f"Found stream URL: {stream_url[:50]}...")
+        
+        return {
+            "stream_url": stream_url,
+            "track_id": track_id,
+            "quality": quality
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error getting stream URL: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/download/progress/{track_id}")
+async def download_progress_stream(track_id: int):
+    async def event_generator():
+        last_progress = -1
+        no_data_count = 0
+        max_no_data = 10
+        
+        while True:
+            if track_id in active_downloads:
+                download_info = active_downloads[track_id]
+                progress = download_info.get('progress', 0)
+                status = download_info.get('status', 'downloading')
+                
+                if progress != last_progress:
+                    yield f"data: {json.dumps({'progress': progress, 'track_id': track_id, 'status': status})}\n\n"
+                    last_progress = progress
+                    no_data_count = 0
+                
+                if progress >= 100 or status == 'completed':
+                    yield f"data: {json.dumps({'progress': 100, 'track_id': track_id, 'status': 'completed'})}\n\n"
+                    break
+            else:
+                no_data_count += 1
+                
+                if no_data_count >= max_no_data:
+                    yield f"data: {json.dumps({'progress': 0, 'track_id': track_id, 'status': 'not_found'})}\n\n"
+                    break
+            
+            await asyncio.sleep(0.5)
+    
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
+
+@app.post("/api/download/track")
+async def download_track_server_side(
+    request: DownloadTrackRequest,
+    background_tasks: BackgroundTasks
+):
+    try:
+        print(f"\n{'='*60}")
+        print(f"Download Request:")
+        print(f"  Track ID: {request.track_id}")
+        print(f"  Artist: {request.artist}")
+        print(f"  Title: {request.title}")
+        print(f"  Quality: {request.quality}")
+        print(f"{'='*60}\n")
+        
+        active_downloads[request.track_id] = {
+            'progress': 0,
+            'status': 'starting'
+        }
+        
+        print(f"[1/3] Getting stream URL...")
+        track_data = tidal_client.get_track(request.track_id, request.quality)
+        if not track_data:
+            del active_downloads[request.track_id]
+            raise HTTPException(status_code=404, detail="Track not found")
+        
+        stream_url = extract_stream_url(track_data)
+        if not stream_url:
+            del active_downloads[request.track_id]
+            raise HTTPException(status_code=404, detail="Stream URL not found")
+        
+        print(f"✓ Stream URL: {stream_url[:60]}...")
+        
+        filename = f"{request.artist} - {request.title}.flac"
+        filename = re.sub(r'[<>:"/\\|?*]', '_', filename)
+        filepath = DOWNLOAD_DIR / filename
+        
+        print(f"\n[2/3] Target file: {filepath}")
+        
+        if filepath.exists():
+            print(f"⚠️  File already exists, skipping download")
+            del active_downloads[request.track_id]
+            return {
+                "status": "exists",
+                "filename": filename,
+                "path": str(filepath),
+                "message": f"File already exists: {filename}"
+            }
+        
+        active_downloads[request.track_id] = {
+            'progress': 0,
+            'status': 'downloading'
+        }
+        
+        background_tasks.add_task(
+            download_file_async,
+            request.track_id,
+            stream_url,
+            filepath,
+            filename
+        )
+        
+        return {
+            "status": "downloading",
+            "filename": filename,
+            "path": str(filepath),
+            "message": f"Download started: {filename}"
+        }
+        
+    except HTTPException:
+        if request.track_id in active_downloads:
+            del active_downloads[request.track_id]
+        raise
+    except Exception as e:
+        print(f"✗ Download error: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        if request.track_id in active_downloads:
+            del active_downloads[request.track_id]
+        
+        raise HTTPException(status_code=500, detail=str(e))
+
+frontend_dist = Path(__file__).parent.parent.parent / "frontend" / "dist"
+
+if frontend_dist.exists():
+    app.mount("/assets", StaticFiles(directory=str(frontend_dist / "assets")), name="assets")
+    
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        if full_path.startswith("api/"):
+            raise HTTPException(status_code=404, detail="Not found")
+        
+        index_file = frontend_dist / "index.html"
+        if index_file.exists():
+            return FileResponse(index_file)
+        
+        raise HTTPException(status_code=404, detail="Frontend not built")
+else:
+    print("Warning: Frontend dist folder not found. Run 'npm run build' in frontend directory.")
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8001)
