@@ -1,9 +1,8 @@
 import { api } from "../api/client";
 import { useDownloadStore } from "../stores/downloadStore";
 
-// Configuration
-const DOWNLOAD_MODE = "server"; // "client" or "server"
-const API_BASE = window.location.origin + "/api"; // Backend API base URL
+const DOWNLOAD_MODE = "server";
+const API_BASE = "/api";
 
 class DownloadManager {
   constructor() {
