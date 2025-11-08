@@ -76,12 +76,12 @@ class DownloadManager {
     let downloadCompleted = false;
     let currentQuality = quality;
 
-    try {
-      console.log(`⬇️ Downloading (server): ${track.artist} - ${track.title}`);
-      console.log(`  Track ID: ${trackId}`);
-      console.log(`  Quality: ${currentQuality}`);
+    const setupProgressMonitoring = () => {
+      return new Promise((resolve, reject) => {
+        if (eventSource) {
+          eventSource.close();
+        }
 
-      const downloadCompletionPromise = new Promise((resolve, reject) => {
         eventSource = new EventSource(
           `${API_BASE}/download/progress/${trackId}`
         );
@@ -146,6 +146,14 @@ class DownloadManager {
           }
         }, 300000);
       });
+    };
+
+    try {
+      console.log(`⬇️ Downloading (server): ${track.artist} - ${track.title}`);
+      console.log(`  Track ID: ${trackId}`);
+      console.log(`  Quality: ${currentQuality}`);
+
+      const downloadCompletionPromise = setupProgressMonitoring();
 
       await this.sleep(500);
 
@@ -192,10 +200,15 @@ class DownloadManager {
             "warning"
           );
 
-          eventSource?.close();
-
+          downloadCompleted = false;
           currentQuality = "LOSSLESS";
           requestBody.quality = "LOSSLESS";
+
+          updateProgress(track.id, 0);
+
+          const newDownloadPromise = setupProgressMonitoring();
+
+          await this.sleep(500);
 
           const fallbackResponse = await fetch(`${API_BASE}/download/track`, {
             method: "POST",
@@ -225,9 +238,10 @@ class DownloadManager {
 
           if (fallbackResult.status === "downloading") {
             console.log("  Waiting for fallback download to complete...");
-            await downloadCompletionPromise;
+            await newDownloadPromise;
           } else if (fallbackResult.status === "exists") {
             downloadCompleted = true;
+            updateProgress(track.id, 100);
           }
 
           completeDownload(track.id, fallbackResult.filename);
@@ -251,6 +265,7 @@ class DownloadManager {
           await downloadCompletionPromise;
         } else if (result.status === "exists") {
           downloadCompleted = true;
+          updateProgress(track.id, 100);
         }
 
         completeDownload(track.id, result.filename);
