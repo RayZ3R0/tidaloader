@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse
@@ -20,6 +20,9 @@ from dotenv import load_dotenv
 from mutagen.flac import FLAC, Picture
 from mutagen.mp4 import MP4, MP4Cover
 from lyrics_client import lyrics_client
+
+# Import auth
+from api.auth import require_auth
 
 load_dotenv()
 
@@ -69,6 +72,8 @@ tidal_client = TidalAPIClient()
 
 class Settings(BaseSettings):
     music_dir: str = str(Path.home() / "music")
+    auth_username: Optional[str] = None
+    auth_password: Optional[str] = None
     
     class Config:
         env_file = Path(__file__).parent.parent / ".env"
@@ -523,10 +528,20 @@ async def organize_file_by_metadata(temp_filepath: Path, metadata: dict) -> Path
 
 @app.get("/api")
 async def api_root():
+    """Public endpoint - no auth required"""
     return {"status": "ok", "message": "Troi Tidal Downloader API"}
 
+@app.get("/api/health")
+async def health_check():
+    """Public health check - no auth required"""
+    return {"status": "healthy"}
+
+# Protected endpoints - all require authentication
 @app.post("/api/troi/generate")
-async def generate_troi_playlist(request: TroiGenerateRequest):
+async def generate_troi_playlist(
+    request: TroiGenerateRequest,
+    username: str = Depends(require_auth)
+):
     try:
         log_info(f"Generating Troi playlist for {request.username}...")
         tracks = TroiIntegration.generate_playlist(
@@ -586,7 +601,7 @@ async def generate_troi_playlist(request: TroiGenerateRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/search/tracks")
-async def search_tracks(q: str):
+async def search_tracks(q: str, username: str = Depends(require_auth)):
     try:
         result = tidal_client.search_tracks(q)
         
@@ -616,7 +631,7 @@ async def search_tracks(q: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/search/albums")
-async def search_albums(q: str):
+async def search_albums(q: str, username: str = Depends(require_auth)):
     try:
         result = tidal_client.search_albums(q)
         
@@ -633,7 +648,7 @@ async def search_albums(q: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/search/artists")
-async def search_artists(q: str):
+async def search_artists(q: str, username: str = Depends(require_auth)):
     try:
         log_info(f"Searching for artist: {q}")
         result = tidal_client.search_artists(q)
@@ -658,7 +673,7 @@ async def search_artists(q: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/album/{album_id}/tracks")
-async def get_album_tracks(album_id: int):
+async def get_album_tracks(album_id: int, username: str = Depends(require_auth)):
     try:
         log_info(f"Fetching tracks for album {album_id}...")
         result = tidal_client.get_album(album_id)
@@ -779,7 +794,7 @@ async def get_album_tracks(album_id: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/artist/{artist_id}")
-async def get_artist(artist_id: int):
+async def get_artist(artist_id: int, username: str = Depends(require_auth)):
     try:
         log_info(f"Fetching artist {artist_id}...")
         result = tidal_client.get_artist(artist_id)
@@ -866,7 +881,6 @@ async def get_artist(artist_id: int):
                 artist_obj = tracks[0]['artist']
                 if isinstance(artist_obj, dict):
                     artist_data = artist_obj
-            
             elif albums and 'artist' in albums[0]:
                 artist_obj = albums[0]['artist']
                 if isinstance(artist_obj, dict):
@@ -921,11 +935,18 @@ async def get_artist(artist_id: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/download/start")
-async def start_download(background_tasks: BackgroundTasks):
+async def start_download(
+    background_tasks: BackgroundTasks,
+    username: str = Depends(require_auth)
+):
     return {"status": "started"}
 
 @app.get("/api/download/stream/{track_id}")
-async def get_stream_url(track_id: int, quality: str = "LOSSLESS"):
+async def get_stream_url(
+    track_id: int,
+    quality: str = "LOSSLESS",
+    username: str = Depends(require_auth)
+):
     try:
         log_info(f"Getting stream URL for track {track_id} at {quality} quality...")
         
@@ -956,7 +977,10 @@ async def get_stream_url(track_id: int, quality: str = "LOSSLESS"):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/download/progress/{track_id}")
-async def download_progress_stream(track_id: int):
+async def download_progress_stream(
+    track_id: int,
+    username: str = Depends(require_auth)
+):
     async def event_generator():
         last_progress = -1
         no_data_count = 0
@@ -998,7 +1022,8 @@ async def download_progress_stream(track_id: int):
 @app.post("/api/download/track")
 async def download_track_server_side(
     request: DownloadTrackRequest,
-    background_tasks: BackgroundTasks
+    background_tasks: BackgroundTasks,
+    username: str = Depends(require_auth)
 ):
     try:
         print(f"\n{'='*60}")

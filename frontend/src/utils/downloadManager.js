@@ -1,6 +1,7 @@
 import { api } from "../api/client";
 import { useDownloadStore } from "../stores/downloadStore";
 import { useToastStore } from "../stores/toastStore";
+import { useAuthStore } from "../store/authStore";
 
 const DOWNLOAD_MODE = "server";
 const API_BASE = "/api";
@@ -40,7 +41,9 @@ class DownloadManager {
   stop() {
     this.isProcessing = false;
     this.activeDownloads.forEach((controller) => {
-      controller.abort();
+      if (controller.abort) {
+        controller.abort();
+      }
     });
     this.activeDownloads.clear();
   }
@@ -72,79 +75,118 @@ class DownloadManager {
       return;
     }
 
-    let eventSource = null;
+    let streamReader = null;
     let downloadCompleted = false;
     let currentQuality = quality;
 
     const setupProgressMonitoring = () => {
       return new Promise((resolve, reject) => {
-        if (eventSource) {
-          eventSource.close();
+        if (streamReader) {
+          streamReader.cancel();
+          streamReader = null;
         }
 
-        eventSource = new EventSource(
-          `${API_BASE}/download/progress/${trackId}`
-        );
+        const authHeader = useAuthStore.getState().getAuthHeader();
+        const headers = {};
+        if (authHeader) {
+          headers["Authorization"] = authHeader;
+        }
 
-        eventSource.onmessage = (event) => {
+        const sseUrl = `${API_BASE}/download/progress/${trackId}`;
+
+        const createAuthenticatedSSE = async () => {
           try {
-            const data = JSON.parse(event.data);
+            const response = await fetch(sseUrl, {
+              headers: headers,
+              credentials: "include",
+            });
 
-            if (data.progress !== undefined) {
-              updateProgress(track.id, data.progress);
-              console.log(
-                `  Progress: ${data.progress}% (${
-                  data.status || "downloading"
-                })`
-              );
+            if (response.status === 401) {
+              useAuthStore.getState().clearCredentials();
+              reject(new Error("Authentication required"));
+              return null;
+            }
 
-              if (data.status === "completed" || data.progress >= 100) {
-                downloadCompleted = true;
-                console.log("  Download completed!");
-                eventSource?.close();
-                resolve();
+            if (!response.ok) {
+              reject(new Error(`HTTP ${response.status}`));
+              return null;
+            }
+
+            const reader = response.body.getReader();
+            streamReader = reader;
+            const decoder = new TextDecoder();
+
+            const readStream = async () => {
+              try {
+                while (true) {
+                  const { done, value } = await reader.read();
+                  if (done) break;
+
+                  const chunk = decoder.decode(value, { stream: true });
+                  const lines = chunk.split("\n");
+
+                  for (const line of lines) {
+                    if (line.startsWith("data: ")) {
+                      const data = JSON.parse(line.substring(6));
+
+                      if (data.progress !== undefined) {
+                        updateProgress(track.id, data.progress);
+                        console.log(
+                          `  Progress: ${data.progress}% (${
+                            data.status || "downloading"
+                          })`
+                        );
+
+                        if (
+                          data.status === "completed" ||
+                          data.progress >= 100
+                        ) {
+                          downloadCompleted = true;
+                          console.log("  Download completed!");
+                          resolve();
+                          return;
+                        }
+                      }
+
+                      if (data.status === "not_found") {
+                        console.error("  Download progress not found");
+                        reject(new Error("Download progress not found"));
+                        return;
+                      }
+
+                      if (data.status === "failed") {
+                        console.error("  Download failed on server");
+                        reject(new Error("Download failed on server"));
+                        return;
+                      }
+                    }
+                  }
+                }
+              } catch (error) {
+                if (!downloadCompleted) {
+                  reject(error);
+                }
               }
-            }
+            };
 
-            if (data.status === "not_found") {
-              console.error("  Download progress not found");
-              reject(new Error("Download progress not found"));
-            }
+            readStream();
 
-            if (data.status === "failed") {
-              console.error("  Download failed on server");
-              reject(new Error("Download failed on server"));
-            }
-          } catch (error) {
-            console.error("Failed to parse progress event:", error);
-          }
-        };
-
-        eventSource.onerror = (error) => {
-          console.error("SSE connection error:", error);
-
-          if (!downloadCompleted) {
-            console.log(
-              "  SSE connection lost, but download may still be in progress..."
-            );
             setTimeout(() => {
               if (!downloadCompleted) {
-                eventSource?.close();
-                reject(new Error("SSE connection failed"));
+                console.error("  Download timeout (5 minutes)");
+                reader.cancel();
+                reject(new Error("Download timeout (5 minutes)"));
               }
-            }, 5000);
-          } else {
-            eventSource?.close();
+            }, 300000);
+
+            return { cancel: () => reader.cancel() };
+          } catch (error) {
+            reject(error);
+            return null;
           }
         };
 
-        setTimeout(() => {
-          if (!downloadCompleted) {
-            console.error("  Download timeout (5 minutes)");
-            eventSource?.close();
-            reject(new Error("Download timeout (5 minutes)"));
-          }
-        }, 300000);
+        createAuthenticatedSSE();
       });
     };
 
@@ -166,15 +208,27 @@ class DownloadManager {
 
       console.log("Starting download...");
 
+      const authHeader = useAuthStore.getState().getAuthHeader();
+      const headers = {
+        "Content-Type": "application/json",
+      };
+      if (authHeader) {
+        headers["Authorization"] = authHeader;
+      }
+
       const response = await fetch(`${API_BASE}/download/track`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: headers,
         body: JSON.stringify(requestBody),
+        credentials: "include",
       });
 
       console.log(`Response status: ${response.status} ${response.statusText}`);
+
+      if (response.status === 401) {
+        useAuthStore.getState().clearCredentials();
+        throw new Error("Authentication required");
+      }
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -200,6 +254,11 @@ class DownloadManager {
             "warning"
           );
 
+          if (streamReader) {
+            streamReader.cancel();
+            streamReader = null;
+          }
+
           downloadCompleted = false;
           currentQuality = "LOSSLESS";
           requestBody.quality = "LOSSLESS";
@@ -212,11 +271,15 @@ class DownloadManager {
 
           const fallbackResponse = await fetch(`${API_BASE}/download/track`, {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
+            headers: headers,
             body: JSON.stringify(requestBody),
+            credentials: "include",
           });
+
+          if (fallbackResponse.status === 401) {
+            useAuthStore.getState().clearCredentials();
+            throw new Error("Authentication required");
+          }
 
           if (!fallbackResponse.ok) {
             const fallbackErrorText = await fallbackResponse.text();
@@ -282,8 +345,13 @@ class DownloadManager {
         "error"
       );
     } finally {
-      if (eventSource) {
-        eventSource.close();
+      if (streamReader) {
+        try {
+          streamReader.cancel();
+        } catch (e) {
+          console.error("Error canceling stream reader:", e);
+        }
+        streamReader = null;
       }
     }
 

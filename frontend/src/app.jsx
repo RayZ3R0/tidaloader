@@ -1,5 +1,8 @@
 import { h } from "preact";
 import { useState } from "preact/hooks";
+import { Router } from "preact-router";
+import { useAuthStore } from "./store/authStore";
+import { Login } from "./components/Login";
 import { SearchBar } from "./components/SearchBar";
 import { TroiGenerator } from "./components/TroiGenerator";
 import { DownloadQueuePopout } from "./components/DownloadQueuePopout";
@@ -7,11 +10,48 @@ import { QualitySelector } from "./components/QualitySelector";
 import { Toast } from "./components/Toast";
 
 export function App() {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const clearCredentials = useAuthStore((state) => state.clearCredentials);
   const [activeTab, setActiveTab] = useState("search");
   const [showSettings, setShowSettings] = useState(false);
 
+  if (!isAuthenticated) {
+    return <Login />;
+  }
+
   return (
-    <div class="min-h-screen bg-background pb-8">
+    <div class="min-h-screen bg-background">
+      {/* Header with logout button */}
+      <header class="bg-surface border-b border-border-light px-4 py-3 shadow-sm">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+          <div class="flex items-center gap-3">
+            <div class="flex items-center justify-center w-10 h-10 bg-primary rounded-xl">
+              <span class="text-2xl">🦑</span>
+            </div>
+            <h1 class="text-xl sm:text-2xl font-bold text-text">Squidloader</h1>
+          </div>
+          <button
+            onClick={clearCredentials}
+            class="flex items-center gap-2 px-4 py-2 bg-surface-alt hover:bg-background-alt border border-border text-text-muted hover:text-text rounded-lg text-sm transition-all duration-200"
+          >
+            <svg
+              class="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+              />
+            </svg>
+            <span class="hidden sm:inline">Logout</span>
+          </button>
+        </div>
+      </header>
+
       <Toast />
       <DownloadQueuePopout />
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
