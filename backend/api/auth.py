@@ -3,14 +3,12 @@ Simple but secure authentication using HTTP Basic Auth
 """
 import os
 import secrets
+import base64
 from typing import Optional
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi import Depends, HTTPException, status, Header
 from dotenv import load_dotenv
 
 load_dotenv()
-
-security = HTTPBasic()
 
 # Load credentials from environment
 AUTH_USERNAME = os.getenv("AUTH_USERNAME")
@@ -24,19 +22,46 @@ if not AUTH_USERNAME or not AUTH_PASSWORD:
         "AUTH_PASSWORD=your-secure-password"
     )
 
-def verify_credentials(credentials: HTTPBasicCredentials = Depends(security)) -> str:
+def verify_credentials(authorization: Optional[str] = Header(None)) -> str:
     """
-    Verify HTTP Basic Auth credentials.
+    Verify HTTP Basic Auth credentials from Authorization header.
     Uses constant-time comparison to prevent timing attacks.
     Returns username if valid, raises HTTPException if not.
     """
+    if not authorization:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing authorization header",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    
+    # Check if it's Basic auth
+    if not authorization.startswith("Basic "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication scheme",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    
+    # Decode the base64 credentials
+    try:
+        encoded_credentials = authorization.replace("Basic ", "")
+        decoded = base64.b64decode(encoded_credentials).decode("utf-8")
+        username, password = decoded.split(":", 1)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials format",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    
     # Constant-time comparison to prevent timing attacks
     is_correct_username = secrets.compare_digest(
-        credentials.username.encode("utf8"),
+        username.encode("utf8"),
         AUTH_USERNAME.encode("utf8")
     )
     is_correct_password = secrets.compare_digest(
-        credentials.password.encode("utf8"),
+        password.encode("utf8"),
         AUTH_PASSWORD.encode("utf8")
     )
 
@@ -47,7 +72,7 @@ def verify_credentials(credentials: HTTPBasicCredentials = Depends(security)) ->
             headers={"WWW-Authenticate": "Basic"},
         )
     
-    return credentials.username
+    return username
 
 # Dependency for protected endpoints
 def require_auth(username: str = Depends(verify_credentials)) -> str:
