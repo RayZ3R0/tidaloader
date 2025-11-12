@@ -32,17 +32,15 @@ def verify_credentials(authorization: Optional[str] = Header(None)) -> str:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing authorization header",
-            headers={"WWW-Authenticate": "Basic"},
         )
-    
+
     # Check if it's Basic auth
     if not authorization.startswith("Basic "):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication scheme",
-            headers={"WWW-Authenticate": "Basic"},
         )
-    
+
     # Decode the base64 credentials
     try:
         encoded_credentials = authorization.replace("Basic ", "")
@@ -52,9 +50,8 @@ def verify_credentials(authorization: Optional[str] = Header(None)) -> str:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials format",
-            headers={"WWW-Authenticate": "Basic"},
         )
-    
+
     # Constant-time comparison to prevent timing attacks
     is_correct_username = secrets.compare_digest(
         username.encode("utf8"),
@@ -69,9 +66,8 @@ def verify_credentials(authorization: Optional[str] = Header(None)) -> str:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",
-            headers={"WWW-Authenticate": "Basic"},
         )
-    
+
     return username
 
 # Dependency for protected endpoints
