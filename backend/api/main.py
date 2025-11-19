@@ -24,6 +24,7 @@ from mutagen.mp4 import MP4, MP4Cover
 from mutagen.mp3 import MP3
 from mutagen.id3 import ID3, APIC, ID3NoHeaderError
 from mutagen.easyid3 import EasyID3
+from mutagen.oggopus import OggOpus
 from lyrics_client import lyrics_client
 
 from api.auth import require_auth
@@ -164,6 +165,10 @@ MP3_QUALITY_MAP = {
     "MP3_256": 256,
 }
 
+OPUS_QUALITY_MAP = {
+    "OPUS_192VBR": 192,
+}
+
 def extract_items(result, key: str) -> List:
     if not result:
         return []
@@ -286,6 +291,60 @@ async def transcode_to_mp3(source_path: Path, target_path: Path, bitrate_kbps: i
         raise Exception("ffmpeg not found. Please install ffmpeg and ensure it is on the PATH.")
     except Exception as e:
         raise Exception(f"Failed to transcode to MP3: {e}")
+      
+async def transcode_to_opus(source_path: Path, target_path: Path, bitrate_kbps: int):
+  try:
+    if platform.system() == "Windows":
+      import subprocess
+      result = subprocess.run(
+        [
+          "ffmpeg",
+          "-y",
+          "-i",
+          str(source_path),
+          "-vn",
+          "-codec:a",
+          "libopus",
+          "-b:a",
+          f"{bitrate_kbps}k",
+          "-map_metadata",
+          "0",
+          str(target_path),
+        ],
+        capture_output=True,
+        text=True
+      )
+      
+      if result.returncode != 0:
+        error_output = result.stderr if result.stderr else "Unknown error"
+        raise Exception(f"FFmpeg failed: {error_output}")
+    else:
+      process = await asyncio.create_subprocess_exec(
+        "ffmpeg",
+        "-y",
+        "-i",
+        str(source_path),
+        "-vn",
+        "-codec:a",
+        "libopus",
+        "-b:a",
+        f"{bitrate_kbps}k",
+        "-map_metadata",
+        "0",
+        str(target_path),
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+      )
+      stdout, stderr = await process.communicate()
+
+      if process.returncode != 0:
+        error_output = stderr.decode() if stderr else "Unknown error"
+        raise Exception(f"FFmpeg failed: {error_output}")
+        
+  except FileNotFoundError:
+    raise Exception("ffmpeg not found. Please install ffmpeg and ensure it is on the PATH.")
+  except Exception as e:
+    raise Exception(f"Failed to transcode to Opus: {e}")
 
 async def search_track_with_fallback(artist: str, title: str, track_obj) -> bool:
     artist_fixed = fix_unicode(artist)
@@ -403,6 +462,24 @@ async def download_file_async(track_id: int, stream_url: str, filepath: Path, fi
                     pass
                 except Exception as exc:
                     log_warning(f"Failed to remove intermediate file: {exc}")
+            elif metadata.get('target_format') == 'opus':
+                bitrate = metadata.get('bitrate_kbps', 192)
+                opus_path = filepath.with_suffix('.opus')
+                log_step("3.5/4", f"Transcoding to Opus ({bitrate} kbps)...")
+                active_downloads[track_id] = {
+                    'progress': 95,
+                    'status': 'transcoding'
+                }
+                download_state_manager.update_progress(track_id, 95)
+                await transcode_to_opus(filepath, opus_path, bitrate)
+                processed_path = opus_path
+                metadata['file_ext'] = '.opus'
+                try:
+                    filepath.unlink()
+                except FileNotFoundError:
+                    pass
+                except Exception as exc:
+                    log_warning(f"Failed to remove intermediate file: {exc}")
             else:
                 processed_path = filepath
                 metadata.setdefault('file_ext', filepath.suffix)
@@ -463,6 +540,7 @@ async def write_metadata_tags(filepath: Path, metadata: dict):
         is_flac = header[:4] == b'fLaC'
         is_m4a = header[4:8] == b'ftyp' or header[4:12] == b'ftypM4A '
         is_mp3 = header[:3] == b'ID3' or filepath.suffix.lower() == '.mp3' or metadata.get('target_format') == 'mp3'
+        is_opus = header[:4] == b'OggS' or filepath.suffix.lower() == '.opus' or metadata.get('target_format') == 'opus'
         
         quality = metadata.get('quality', 'UNKNOWN')
         
@@ -475,6 +553,9 @@ async def write_metadata_tags(filepath: Path, metadata: dict):
         elif is_mp3:
             log_info(f"File format: MP3 ({quality})")
             await write_mp3_metadata(filepath, metadata)
+        elif is_opus:
+            log_info(f"File format: Opus ({quality})")
+            await write_opus_metadata(filepath, metadata)
         else:
             log_warning(f"Unknown file format, skipping metadata")
             log_info(f"Header: {header.hex()}")
@@ -657,6 +738,47 @@ async def write_mp3_metadata(filepath: Path, metadata: dict):
         log_warning(f"Failed to write MP3 metadata: {e}")
         raise
 
+async def write_opus_metadata(filepath: Path, metadata: dict):
+    try:
+        audio = OggOpus(str(filepath))
+        
+        if metadata.get('title'):
+            audio['TITLE'] = metadata['title']
+        if metadata.get('artist'):
+            audio['ARTIST'] = metadata['artist']
+        if metadata.get('album'):
+            audio['ALBUM'] = metadata['album']
+        if metadata.get('album_artist'):
+            audio['ALBUMARTIST'] = metadata['album_artist']
+        if metadata.get('date'):
+            audio['DATE'] = metadata['date']
+        if metadata.get('track_number'):
+            audio['TRACKNUMBER'] = str(metadata['track_number'])
+        if metadata.get('total_tracks'):
+            audio['TRACKTOTAL'] = str(metadata['total_tracks'])
+        if metadata.get('disc_number'):
+            audio['DISCNUMBER'] = str(metadata['disc_number'])
+        if metadata.get('genre'):
+            audio['GENRE'] = metadata['genre']
+        
+        if metadata.get('musicbrainz_trackid'):
+            audio['MUSICBRAINZ_TRACKID'] = metadata['musicbrainz_trackid']
+        if metadata.get('musicbrainz_albumid'):
+            audio['MUSICBRAINZ_ALBUMID'] = metadata['musicbrainz_albumid']
+        if metadata.get('musicbrainz_artistid'):
+            audio['MUSICBRAINZ_ARTISTID'] = metadata['musicbrainz_artistid']
+        if metadata.get('musicbrainz_albumartistid'):
+            audio['MUSICBRAINZ_ALBUMARTISTID'] = metadata['musicbrainz_albumartistid']
+        
+        await fetch_and_store_lyrics(filepath, metadata, audio)
+        
+        audio.save()
+        log_success("Opus metadata tags written")
+        
+    except Exception as e:
+        log_warning(f"Failed to write Opus metadata: {e}")
+        raise
+
 async def fetch_and_store_lyrics(filepath: Path, metadata: dict, audio_file=None):
     if metadata.get('title') and metadata.get('artist'):
         try:
@@ -760,7 +882,7 @@ async def organize_file_by_metadata(temp_filepath: Path, metadata: dict) -> Path
                 shutil.move(str(temp_txt_path), str(final_txt_path))
                 log_success("Moved .txt file to organized location")
         
-        if metadata.get('synced_lyrics'):
+        if metadata.get('synced_lyrics') and metadata.get('target_format') != 'opus':
             lrc_path = final_path.with_suffix('.lrc')
             try:
                 with open(lrc_path, 'w', encoding='utf-8') as f:
@@ -769,7 +891,7 @@ async def organize_file_by_metadata(temp_filepath: Path, metadata: dict) -> Path
             except Exception as e:
                 log_warning(f"Failed to save .lrc file: {e}")
         
-        elif metadata.get('plain_lyrics'):
+        elif metadata.get('plain_lyrics') and metadata.get('target_format') != 'opus':
             txt_path = final_path.with_suffix('.txt')
             try:
                 with open(txt_path, 'w', encoding='utf-8') as f:
@@ -777,6 +899,19 @@ async def organize_file_by_metadata(temp_filepath: Path, metadata: dict) -> Path
                 log_success("Saved plain lyrics to .txt file")
             except Exception as e:
                 log_warning(f"Failed to save .txt file: {e}")
+        
+        if metadata.get('target_format') == 'opus' and metadata.get('cover_url'):
+            cover_path = final_dir / 'cover.jpg'
+            try:
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(metadata['cover_url']) as response:
+                        if response.status == 200:
+                            image_data = await response.read()
+                            with open(cover_path, 'wb') as f:
+                                f.write(image_data)
+                            log_success("Saved cover art to cover.jpg")
+            except Exception as e:
+                log_warning(f"Failed to save cover art: {e}")
         
         return final_path
         
@@ -1453,7 +1588,8 @@ async def download_track_server_side(
         log_step("1/4", "Getting track metadata...")
         
         is_mp3_request = requested_quality in MP3_QUALITY_MAP
-        source_quality = 'LOSSLESS' if is_mp3_request else requested_quality
+        is_opus_request = requested_quality in OPUS_QUALITY_MAP
+        source_quality = 'LOSSLESS' if is_mp3_request or is_opus_request else requested_quality
         
         track_info = tidal_client.get_track(request.track_id, source_quality)
         if not track_info:
@@ -1468,6 +1604,10 @@ async def download_track_server_side(
         if is_mp3_request:
             metadata['target_format'] = 'mp3'
             metadata['bitrate_kbps'] = MP3_QUALITY_MAP[requested_quality]
+            metadata['quality_label'] = requested_quality
+        elif is_opus_request:
+            metadata['target_format'] = 'opus'
+            metadata['bitrate_kbps'] = OPUS_QUALITY_MAP[requested_quality]
             metadata['quality_label'] = requested_quality
         
         if isinstance(track_info, list) and len(track_info) > 0:
@@ -1514,7 +1654,12 @@ async def download_track_server_side(
         log_success(f"Stream URL: {stream_url[:60]}...")
         
         download_ext = '.m4a' if source_quality in ['LOW', 'HIGH'] else '.flac'
-        final_ext = '.mp3' if is_mp3_request else download_ext
+        if is_mp3_request:
+            final_ext = '.mp3'
+        elif is_opus_request:
+            final_ext = '.opus'
+        else:
+            final_ext = download_ext
         metadata['file_ext'] = final_ext
         metadata['download_ext'] = download_ext
         

@@ -10,6 +10,7 @@ const QUALITY_OPTIONS = [
   { value: "LOSSLESS", label: "FLAC", description: "16-bit/44.1kHz" },
   { value: "MP3_256", label: "MP3 256kbps", description: "Transcoded MP3 (libmp3lame)" },
   { value: "MP3_128", label: "MP3 128kbps", description: "Transcoded MP3 (smaller size)" },
+  { value: "OPUS_192VBR", label: "Opus 192kbps VBR ", description: "Variable bitrate Opus (192kbps target)" },
   { value: "HIGH", label: "320kbps AAC", description: "High quality AAC" },
   { value: "LOW", label: "96kbps AAC", description: "Low quality AAC" },
 ];
