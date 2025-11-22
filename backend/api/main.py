@@ -11,6 +11,7 @@ import time
 import aiofiles
 import re
 import requests
+import traceback
 import asyncio
 from contextlib import asynccontextmanager
 import json
@@ -1749,7 +1750,9 @@ async def download_track_server_side(
                 # Tidal often doesn't explicitly flag compilations in the track info, 
                 # but we can infer it if the album artist is "Various Artists"
                 # or if the album type is "COMPILATION" (if available)
-                if album_data.get('type') == 'COMPILATION' or metadata.get('album_artist', '').lower() is not None and metadata.get('album_artist', '').lower() in ['various artists', 'various']:
+                # or if the album type is "COMPILATION" (if available)
+                album_artist = metadata.get('album_artist') or ''
+                if album_data.get('type') == 'COMPILATION' or (album_artist and album_artist.lower() in ['various artists', 'various']):
                     metadata['compilation'] = True
         
         log_success(f"Track metadata: {metadata.get('artist')} - {metadata.get('title')}")
