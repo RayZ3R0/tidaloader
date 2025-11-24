@@ -884,8 +884,53 @@ async def run_beets_import(path: Path):
 
         log_step("4/4", f"Running beets import on {path.name}...")
         
-        # Run beet import in quiet mode
-        cmd = [beet_cmd, "import", "-q", str(path)]
+        # Check for existing config
+        use_custom_config = False
+        custom_config_path = Path("tidaloader_beets.yaml").resolve()
+        
+        try:
+            # Check if beets finds a user config
+            result = subprocess.run([beet_cmd, "config", "-p"], capture_output=True, text=True)
+            config_path = result.stdout.strip()
+            
+            if result.returncode != 0 or not config_path or not os.path.exists(config_path):
+                log_info("No existing Beets config found. Using auto-generated configuration.")
+                use_custom_config = True
+            else:
+                log_info(f"Using existing Beets config at: {config_path}")
+                
+        except Exception as e:
+            log_warning(f"Error checking Beets config: {e}. Defaulting to auto-generated config.")
+            use_custom_config = True
+            
+        if use_custom_config:
+            # Generate custom config
+            config_content = """
+directory: /tmp # Dummy, we don't move files
+plugins: chroma fetchart embedart
+import:
+    write: yes
+    copy: no
+    move: no
+    autotag: yes
+    timid: no
+chroma:
+    auto: yes
+fetchart:
+    auto: yes
+embedart:
+    auto: yes
+"""
+            with open(custom_config_path, "w") as f:
+                f.write(config_content)
+        
+        # Construct command
+        cmd = [beet_cmd]
+        if use_custom_config:
+            cmd.extend(["-c", str(custom_config_path)])
+            
+        cmd.extend(["import", "-q", str(path)])
+        
         process = await asyncio.create_subprocess_exec(
             *cmd,
             stdout=asyncio.subprocess.PIPE,
