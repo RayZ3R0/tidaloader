@@ -907,29 +907,45 @@ async def run_beets_import(path: Path):
             # Generate custom config
             config_content = """
 directory: /tmp # Dummy, we don't move files
-plugins: chroma fetchart embedart
+plugins: chroma fetchart embedart lastgenre
 import:
     write: yes
     copy: no
     move: no
     autotag: yes
     timid: no
+    resume: ask
+    incremental: no
+    quiet_fallback: skip
+    log: beets_import.log
 chroma:
     auto: yes
 fetchart:
     auto: yes
 embedart:
     auto: yes
+lastgenre:
+    auto: yes
+    source: artist
+musicbrainz:
+    genres: yes
+    match:
+        strong_rec_thresh: 0.10
+        distance_weights:
+            missing_tracks: 0.0
+            unmatched_tracks: 0.0
 """
-            with open(custom_config_path, "w") as f:
-                f.write(config_content)
+        # Always overwrite the config to ensure latest settings are applied
+        with open(custom_config_path, "w") as f:
+            f.write(config_content)
+        log_info("Generated/Updated custom Beets configuration.")
+
+        log_step("4/4", f"Running beets import on {path.name}...")
         
-        # Construct command
-        cmd = [beet_cmd]
-        if use_custom_config:
-            cmd.extend(["-c", str(custom_config_path)])
-            
-        cmd.extend(["import", "-q", str(path)])
+        # Run beet import in quiet mode but capture output
+        # Added -vv for verbose logging in case of issues, but we filter what we show
+        # Added -s (singletons) to treat tracks individually, avoiding "missing tracks" penalty
+        cmd = [beet_cmd, "-c", str(custom_config_path), "import", "-q", "-s", str(path)]
         
         process = await asyncio.create_subprocess_exec(
             *cmd,
@@ -938,10 +954,18 @@ embedart:
         )
         stdout, stderr = await process.communicate()
         
+        stdout_str = stdout.decode()
+        stderr_str = stderr.decode()
+        
         if process.returncode == 0:
             log_success("Beets import completed successfully")
+            # Log the output for debugging purposes if needed
+            print(f"Beets Output:\n{stdout_str}")
+            if stderr_str:
+                print(f"Beets Errors/Warnings:\n{stderr_str}")
         else:
-            log_warning(f"Beets import failed: {stderr.decode()}")
+            log_warning(f"Beets import failed: {stderr_str}")
+            print(f"Beets Output:\n{stdout_str}")
             
     except Exception as e:
         log_warning(f"Failed to run beets import: {e}")
