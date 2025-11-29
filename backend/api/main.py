@@ -907,6 +907,7 @@ async def run_beets_import(path: Path):
             # Generate custom config
             config_content = """
 directory: /tmp # Dummy, we don't move files
+original_date: no
 plugins: chroma fetchart embedart lastgenre
 import:
     write: yes
