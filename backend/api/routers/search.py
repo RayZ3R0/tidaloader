@@ -202,13 +202,18 @@ async def get_artist(artist_id: int, username: str = Depends(require_auth)):
         for item in track_list[:10]:  # Limit to top 10
             track = item.get('item', item) if isinstance(item, dict) else item
             if is_track_like(track):
+                album_data = track.get('album', {}) if isinstance(track.get('album'), dict) else {}
                 top_tracks.append({
                     'id': track['id'],
                     'title': track['title'],
-                    'album': track.get('album', {}).get('title') if isinstance(track.get('album'), dict) else None,
+                    'trackNumber': track.get('trackNumber'),
+                    'album': {
+                        'title': album_data.get('title'),
+                        'cover': album_data.get('cover'),
+                    } if album_data else None,
+                    'artist': track.get('artist', {}),
                     'duration': track['duration'],
-                    'quality': track.get('audioQuality', 'LOSSLESS'),
-                    'cover': track.get('album', {}).get('cover') if isinstance(track.get('album'), dict) else None
+                    'audioQuality': track.get('audioQuality', 'LOSSLESS'),
                 })
         
         # Sort albums by year (newest first)
@@ -220,11 +225,61 @@ async def get_artist(artist_id: int, username: str = Depends(require_auth)):
         
         albums.sort(key=get_album_timestamp, reverse=True)
         
-        log_info(f"Found {len(albums)} albums, {len(top_tracks)} top tracks for artist {artist_id}")
+        # Extract artist info for frontend - the raw data is deeply nested
+        # Artist picture may be in 'picture' or 'images' depending on API response
+        # Helper to find artist object recursively
+        # The API returns a "page" response for get_artist, so the artist details are hidden inside
+        # the albums/tracks lists associated with the artist.
+        def find_artist_object_recursive(data, target_id):
+            if isinstance(data, dict):
+                # Check if this dict is an artist object with matching ID
+                # Must have id and name to be useful
+                if 'id' in data and str(data.get('id')) == str(target_id) and 'name' in data:
+                    return data
+                
+                # Recurse
+                for v in data.values():
+                    res = find_artist_object_recursive(v, target_id)
+                    if res: return res
+            
+            elif isinstance(data, list):
+                for item in data:
+                    res = find_artist_object_recursive(item, target_id)
+                    if res: return res
+            return None
+            
+        artist_details = None
+        artist_picture = None
+        artist_name = artist_info.get('name') # Try direct name first
+        
+        # Try to find specific artist object if direct info is missing
+        if not artist_name or not artist_info.get('picture'):
+             found_obj = find_artist_object_recursive(artist_info, artist_id)
+             if found_obj:
+                 artist_details = found_obj
+                 if not artist_name:
+                     artist_name = found_obj.get('name')
+                 artist_picture = found_obj.get('picture')
+
+        # Fallback for picture if not in the found object (e.g. if we only found a partial object)
+        if not artist_picture and isinstance(artist_info, dict):
+            # Try direct picture field
+            artist_picture = artist_info.get('picture')
+            
+            # Try images array
+            if not artist_picture and 'images' in artist_info:
+                images = artist_info.get('images', [])
+                if images and isinstance(images, list) and len(images) > 0:
+                    artist_picture = images[0].get('id') or images[0].get('url')
         
         return {
-            "info": artist_info,
-            "top_tracks": top_tracks,
+            "artist": {
+                "id": artist_id,
+                "name": artist_name or f"Artist {artist_id}",
+                "picture": artist_picture,
+                "popularity": artist_info.get('popularity') if isinstance(artist_info, dict) else None,
+            },
+            "tracks": top_tracks,
             "albums": albums
         }
         

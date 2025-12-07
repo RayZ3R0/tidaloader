@@ -344,138 +344,196 @@ export function ArtistPage({ artistId, onBack }) {
         </div>
       </div>
 
-      {topTracks.length > 0 && (
-        <div class="space-y-4">
-          <div class="flex items-center justify-between">
-            <h3 class="text-xl font-bold text-text">
-              Top Tracks ({topTracks.length})
-            </h3>
-          </div>
-
-          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-surface-alt rounded-lg border border-border-light">
-            <div class="flex flex-wrap gap-3">
-              <button class="btn-surface text-sm" onClick={selectAllTracks}>
-                Select All
-              </button>
-              <button class="btn-surface text-sm" onClick={deselectAllTracks}>
-                Deselect All
-              </button>
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {topTracks.length > 0 && (
+          <div class={`space-y-4 hidden md:block ${albums.length > 0 ? 'lg:col-span-5' : 'lg:col-span-12'}`}>
+            <div class="flex items-center justify-between">
+              <h3 class="text-xl font-bold text-text">
+                Top Tracks ({topTracks.length})
+              </h3>
             </div>
-            {selectedTracks.size > 0 && (
-              <button class="btn-primary" onClick={handleDownloadTracks}>
-                Add {selectedTracks.size} to Queue
-              </button>
-            )}
-          </div>
 
-          <div class="space-y-2 max-h-[600px] overflow-y-auto">
-            {topTracks.map((track) => (
-              <label
-                key={track.id}
-                class="flex items-center gap-3 p-3 bg-surface-alt hover:bg-background-alt rounded-lg border border-border-light cursor-pointer transition-all duration-200"
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedTracks.has(track.id)}
-                  onChange={() => toggleTrack(track.id)}
-                  class="w-4 h-4 text-primary focus:ring-primary rounded"
-                />
-                {track.album?.cover && (
-                  <img
-                    src={api.getCoverUrl(track.album.cover, "80")}
-                    alt={track.title}
-                    class="w-12 h-12 rounded object-cover flex-shrink-0"
-                  />
-                )}
-                <div class="flex-1 min-w-0">
-                  <p class="text-sm font-medium text-text truncate">
-                    {track.title}
-                  </p>
-                  <p class="text-xs text-text-muted truncate">
-                    {track.album?.title || "Unknown Album"}
-                    {track.duration && (
-                      <span> • {formatDuration(track.duration)}</span>
-                    )}
-                  </p>
-                </div>
-                {track.audioQuality && (
-                  <span class="px-2 py-1 bg-primary text-white text-xs font-semibold rounded flex-shrink-0">
-                    {track.audioQuality}
-                  </span>
-                )}
-              </label>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {albums.length > 0 && (
-        <div class="space-y-4">
-          <div class="flex items-center justify-between">
-            <h3 class="text-xl font-bold text-text">
-              Albums ({albums.length})
-            </h3>
-          </div>
-
-          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-surface-alt rounded-lg border border-border-light">
-            <div class="flex flex-wrap gap-3">
-              <button class="btn-surface text-sm" onClick={selectAllAlbums}>
-                Select All
-              </button>
-              <button class="btn-surface text-sm" onClick={deselectAllAlbums}>
-                Deselect All
-              </button>
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 bg-surface-alt rounded-lg border border-border-light">
+              <div class="flex flex-wrap gap-2">
+                <button class="btn-surface text-xs px-3 py-1.5" onClick={selectAllTracks}>
+                  Select All
+                </button>
+                <button class="btn-surface text-xs px-3 py-1.5" onClick={deselectAllTracks}>
+                  Deselect
+                </button>
+              </div>
+              {selectedTracks.size > 0 && (
+                <button class="btn-primary text-xs px-3 py-1.5" onClick={handleDownloadTracks}>
+                  Add {selectedTracks.size} to Queue
+                </button>
+              )}
             </div>
-            {selectedAlbums.size > 0 && (
-              <button
-                class="btn-primary"
-                onClick={handleDownloadAlbums}
-                disabled={loading}
-              >
-                Add {selectedAlbums.size} Albums to Queue
-              </button>
-            )}
-          </div>
 
-          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {albums.map((album) => (
-              <label
-                key={album.id}
-                class="card-hover p-3 relative cursor-pointer"
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedAlbums.has(album.id)}
-                  onChange={() => toggleAlbum(album.id)}
-                  class="absolute top-5 right-5 w-5 h-5 text-primary focus:ring-primary rounded z-10"
-                />
-                {album.cover && (
-                  <img
-                    src={api.getCoverUrl(album.cover, "320")}
-                    alt={album.title}
-                    class="w-full aspect-square object-cover rounded-lg mb-3"
-                  />
-                )}
-                <div class="space-y-1">
-                  <p class="text-sm font-semibold text-text line-clamp-2">
-                    {album.title}
-                  </p>
-                  {album.numberOfTracks && (
-                    <p class="text-xs text-text-muted">
-                      {album.numberOfTracks} tracks
-                    </p>
-                  )}
-                  {album.releaseDate && (
-                    <p class="text-xs text-text-muted">
-                      {new Date(album.releaseDate).getFullYear()}
-                    </p>
-                  )}
-                </div>
-              </label>
-            ))}
+            <div class="space-y-4">
+              <div class={`grid gap-2 ${albums.length > 0 ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'}`}>
+                {topTracks.map((track) => {
+                  const isSelected = selectedTracks.has(track.id);
+                  return (
+                    <div
+                      key={track.id}
+                      onClick={() => toggleTrack(track.id)}
+                      class={`
+                      group relative flex items-center gap-2.5 p-2 rounded-lg transition-all duration-200 cursor-pointer border
+                      ${isSelected
+                          ? "bg-primary/5 border-primary/30"
+                          : "bg-surface-alt/30 hover:bg-surface-alt border-transparent hover:border-border"}
+                    `}
+                    >
+                      <div class="relative flex-shrink-0">
+                        {track.album?.cover ? (
+                          <img
+                            src={api.getCoverUrl(track.album.cover, "80")}
+                            alt={track.title}
+                            class={`w-10 h-10 rounded-md object-cover shadow-sm transition-transform duration-200 ${isSelected ? "opacity-100" : "group-hover:opacity-90"}`}
+                          />
+                        ) : (
+                          <div class="w-10 h-10 rounded-md bg-surface flex items-center justify-center text-text-muted">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+
+                      <div class="flex-1 min-w-0 pr-1">
+                        <p class={`text-sm font-semibold truncate leading-tight transition-colors duration-200 ${isSelected ? "text-primary" : "text-text group-hover:text-primary"}`}>
+                          {track.title}
+                        </p>
+                        <div class="flex items-center gap-1.5 text-[11px] text-text-muted mt-0.5 leading-tight">
+                          <span class="truncate max-w-[100px]" title={track.album?.title}>{track.album?.title || "Unknown"}</span>
+                          {track.duration && (
+                            <>
+                              <span class="text-border">•</span>
+                              <span>{formatDuration(track.duration)}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Selection Checkmark */}
+                      {isSelected && (
+                        <div class="flex-shrink-0 text-primary">
+                          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                      )}
+
+                      {!isSelected && track.audioQuality && track.audioQuality !== "LOSSLESS" && (
+                        <div class="flex-shrink-0 self-center">
+                          <span class="px-1 py-0.5 bg-surface text-[9px] font-bold text-text-muted uppercase rounded border border-border/50">
+                            {track.audioQuality === "HI_RES" ? "Hi-Res" : "High"}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {albums.length > 0 && (
+          <div class={`space-y-4 ${topTracks.length > 0 ? 'lg:col-span-7' : 'lg:col-span-12'}`}>
+            <div class="flex items-center justify-between">
+              <h3 class="text-xl font-bold text-text">
+                Albums ({albums.length})
+              </h3>
+            </div>
+
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 bg-surface-alt rounded-lg border border-border-light">
+              <div class="flex flex-wrap gap-2">
+                <button class="btn-surface text-xs px-3 py-1.5" onClick={selectAllAlbums}>
+                  Select All
+                </button>
+                <button class="btn-surface text-xs px-3 py-1.5" onClick={deselectAllAlbums}>
+                  Deselect
+                </button>
+              </div>
+              {selectedAlbums.size > 0 && (
+                <button
+                  class="btn-primary text-xs px-3 py-1.5"
+                  onClick={handleDownloadAlbums}
+                  disabled={loading}
+                >
+                  Add {selectedAlbums.size} Albums to Queue
+                </button>
+              )}
+            </div>
+
+            <div class={`grid gap-4 ${topTracks.length > 0 ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'}`}>
+              {albums.map((album) => {
+                const isSelected = selectedAlbums.has(album.id);
+                return (
+                  <div
+                    key={album.id}
+                    onClick={() => toggleAlbum(album.id)}
+                    class={`
+                      group relative p-3 rounded-xl cursor-pointer transition-all duration-200 border
+                      ${isSelected
+                        ? "bg-primary/5 border-primary/30 shadow-sm ring-1 ring-primary/20"
+                        : "bg-surface-alt/30 border-transparent hover:bg-surface-alt hover:border-border/50"}
+                    `}
+                  >
+                    <div class="relative w-full aspect-square mb-3">
+                      {album.cover ? (
+                        <img
+                          src={api.getCoverUrl(album.cover, "320")}
+                          alt={album.title}
+                          class="w-full h-full object-cover rounded-lg shadow-sm"
+                        />
+                      ) : (
+                        <div class="w-full h-full rounded-lg bg-surface flex items-center justify-center">
+                          <span class="text-text-muted text-xs">No Cover</span>
+                        </div>
+                      )}
+
+                      {/* Selection Overlay Badge */}
+                      <div class={`
+                        absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center shadow-md transition-all duration-200
+                        ${isSelected
+                          ? "bg-primary text-white custom-scale-100 opacity-100"
+                          : "bg-black/40 text-white/50 custom-scale-90 opacity-0 group-hover:opacity-100"}
+                      `}>
+                        {isSelected ? (
+                          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                          </svg>
+                        ) : (
+                          <div class="w-4 h-4 rounded-full border-2 border-white/50"></div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div class="space-y-1">
+                      <p class={`text-sm font-semibold line-clamp-2 leading-tight transition-colors ${isSelected ? "text-primary" : "text-text"}`}>
+                        {album.title}
+                      </p>
+                      <div class="flex items-center gap-2 text-xs text-text-muted">
+                        {album.releaseDate && (
+                          <span>{new Date(album.releaseDate).getFullYear()}</span>
+                        )}
+                        {album.numberOfTracks && (
+                          <>
+                            <span class="w-1 h-1 rounded-full bg-border"></span>
+                            <span>{album.numberOfTracks} tracks</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
 
       {topTracks.length === 0 && albums.length === 0 && (
         <div class="text-center py-12">
