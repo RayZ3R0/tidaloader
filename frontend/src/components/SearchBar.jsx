@@ -5,6 +5,7 @@ import { downloadManager } from "../utils/downloadManager";
 import { useToastStore } from "../stores/toastStore";
 import { ArtistPage } from "./ArtistPage";
 import { AlbumPage } from "./AlbumPage";
+import { PlaylistPage } from "./PlaylistPage";
 
 export function SearchBar() {
   const [query, setQuery] = useState("");
@@ -49,8 +50,10 @@ export function SearchBar() {
         result = await api.searchTracks(query.trim());
       } else if (activeType === "album") {
         result = await api.searchAlbums(query.trim());
-      } else {
+      } else if (activeType === "artist") {
         result = await api.searchArtists(query.trim());
+      } else {
+        result = await api.searchPlaylists(query.trim());
       }
 
       setResults(result.items || []);
@@ -118,7 +121,7 @@ export function SearchBar() {
           value={query}
           onInput={(e) => setQuery(e.target.value)}
           onKeyPress={handleKeyPress}
-          placeholder="Search for tracks, albums, or artists..."
+          placeholder="Search for tracks, albums, artists, or playlists..."
           disabled={loading}
           class="input-field flex-1"
         />
@@ -163,7 +166,7 @@ export function SearchBar() {
       </div>
 
       <div class="flex flex-wrap gap-3 p-4 bg-surface-alt rounded-xl border border-border-light">
-        {["track", "album", "artist"].map((type) => (
+        {["track", "album", "artist", "playlist"].map((type) => (
           <label
             key={type}
             class={`flex items-center gap-3 px-4 py-2 rounded-lg cursor-pointer transition-all duration-200 ${searchType === type
@@ -207,6 +210,14 @@ export function SearchBar() {
                   stroke-linejoin="round"
                   stroke-width="2"
                   d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                />
+              )}
+              {type === "playlist" && (
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 6h16M4 12h10M4 18h7"
                 />
               )}
             </svg>
@@ -265,6 +276,10 @@ export function SearchBar() {
 
       {searchType === "artist" && results.length > 0 && (
         <ArtistResults results={results} />
+      )}
+
+      {searchType === "playlist" && results.length > 0 && (
+        <PlaylistResults results={results} />
       )}
     </div>
   );
@@ -438,6 +453,81 @@ function ArtistResults({ results }) {
         ))}
       </div>
     </div>
+  );
+}
+
+function PlaylistResults({ results }) {
+  const [selectedPlaylistId, setSelectedPlaylistId] = useState(null);
+
+  if (selectedPlaylistId) {
+    return (
+      <PlaylistPage
+        playlistId={selectedPlaylistId}
+        onBack={() => setSelectedPlaylistId(null)}
+      />
+    );
+  }
+
+  return (
+    <div class="space-y-4">
+      <h3 class="text-lg font-semibold text-text">
+        Found {results.length} playlists
+      </h3>
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        {results.map((playlist) => (
+          <div
+            key={playlist.id}
+            class="card-hover p-3"
+            onClick={() => setSelectedPlaylistId(playlist.id)}
+          >
+            {playlist.cover ? (
+              <PlaylistCoverImage cover={playlist.cover} title={playlist.title} />
+            ) : null}
+            <div class="space-y-1">
+              <p class="text-sm font-semibold text-text line-clamp-2">
+                {playlist.title}
+              </p>
+              {playlist.creator && (
+                <p class="text-xs text-text-muted truncate">
+                  By {playlist.creator}
+                </p>
+              )}
+              {playlist.numberOfTracks && (
+                <p class="text-xs text-text-muted">
+                  {playlist.numberOfTracks} tracks
+                </p>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PlaylistCoverImage({ cover, title }) {
+  const variants = api.getCoverUrlVariants(cover);
+  const fallbackRef = useState(0)[0];
+
+  if (!variants.length) return null;
+
+  const handleError = (e) => {
+    const idx = Number(e.target.dataset.idx || 0);
+    const next = idx + 1;
+    if (next < variants.length) {
+      e.target.dataset.idx = String(next);
+      e.target.src = variants[next];
+    }
+  };
+
+  return (
+    <img
+      src={variants[0]}
+      data-idx="0"
+      alt={title}
+      onError={handleError}
+      class="w-full aspect-square object-cover rounded-lg mb-3"
+    />
   );
 }
 

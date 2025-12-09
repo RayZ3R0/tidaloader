@@ -265,6 +265,10 @@ class TidalAPIClient:
                                     artists_data = data.get('artists', {})
                                     if isinstance(artists_data, dict) and not artists_data.get('items'):
                                         is_empty = True
+                                elif operation == "search_playlists":
+                                    playlists_data = data.get('playlists', {})
+                                    if isinstance(playlists_data, dict) and not playlists_data.get('items'):
+                                        is_empty = True
                             # For other operations, don't apply the empty check
                             
                             if is_empty:
@@ -301,6 +305,10 @@ class TidalAPIClient:
     
     def search_artists(self, query: str) -> Optional[Dict]:
         return self._make_request("/search/", {"a": query}, operation="search_artists")
+
+    def search_playlists(self, query: str) -> Optional[Dict]:
+        """Search playlists by name."""
+        return self._make_request("/search/", {"p": query}, operation="search_playlists")
     
     def get_track(self, track_id: int, quality: str = "LOSSLESS") -> Optional[Dict]:
         """Get track playback info (stream URL, manifest, etc.)"""
@@ -333,6 +341,14 @@ class TidalAPIClient:
     
     def get_artist(self, artist_id: int) -> Optional[Dict]:
         return self._make_request("/artist/", {"f": artist_id}, operation="get_artist")
+
+    def get_playlist(self, playlist_id: str) -> Optional[Dict]:
+        """Get playlist metadata and items."""
+        return self._make_request("/playlist/", {"id": playlist_id}, operation="get_playlist")
+
+    def get_playlist_tracks(self, playlist_id: str) -> Optional[Dict]:
+        """Alias for get_playlist to keep naming consistent with album tracks."""
+        return self._make_request("/playlist/", {"id": playlist_id}, operation="get_playlist_tracks")
     
     def get_download_status(self, track_id: int) -> Optional[Dict]:
         if track_id in self.download_status_cache:

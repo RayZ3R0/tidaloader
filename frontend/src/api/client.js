@@ -102,6 +102,13 @@ class ApiClient {
   }
 
   /**
+   * Search for playlists
+   */
+  searchPlaylists(query) {
+    return this.get("/search/playlists", { q: query });
+  }
+
+  /**
    * Get album tracks
    */
   getAlbumTracks(albumId) {
@@ -113,6 +120,13 @@ class ApiClient {
    */
   getArtist(artistId) {
     return this.get(`/artist/${artistId}`);
+  }
+
+  /**
+   * Get playlist details and tracks
+   */
+  getPlaylist(playlistId) {
+    return this.get(`/playlist/${playlistId}`);
   }
 
   /**
@@ -180,11 +194,36 @@ class ApiClient {
    * Get cover URL from Tidal
    */
   getCoverUrl(coverId, size = "640") {
-    if (!coverId) return null;
+    const variants = this.getCoverUrlVariants(coverId, [size]);
+    return variants.length > 0 ? variants[0] : null;
+  }
 
-    // Handle different cover ID formats
-    const cleanId = String(coverId).replace(/-/g, "/");
-    return `https://resources.tidal.com/images/${cleanId}/${size}x${size}.jpg`;
+  /**
+   * Return multiple size variants for a cover ID or URL (largest to smallest)
+   */
+  getCoverUrlVariants(coverId, sizes = ["640", "320", "160"]) {
+    if (!coverId) return [];
+    if (typeof coverId === "string" && coverId.startsWith("http")) {
+      return [coverId];
+    }
+
+    const cleanOriginal = String(coverId).replace(/-/g, "/");
+    const candidates = [
+      cleanOriginal,
+      cleanOriginal.toUpperCase(),
+      cleanOriginal.toLowerCase(),
+    ].filter(Boolean);
+
+    const urls = [];
+    for (const id of candidates) {
+      for (const s of sizes) {
+        const url = `https://resources.tidal.com/images/${id}/${s}x${s}.jpg`;
+        if (!urls.includes(url)) {
+          urls.push(url);
+        }
+      }
+    }
+    return urls;
   }
 
   get baseUrl() {

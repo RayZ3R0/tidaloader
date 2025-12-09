@@ -10,9 +10,18 @@ class TrackSearchResult(BaseModel):
     title: str
     artist: str
     album: Optional[str] = None
+    track_number: Optional[int] = None
     duration: Optional[int] = None
     cover: Optional[str] = None
     quality: Optional[str] = None
+
+class PlaylistSearchResult(BaseModel):
+    id: str
+    title: str
+    creator: Optional[str] = None
+    description: Optional[str] = None
+    numberOfTracks: Optional[int] = None
+    cover: Optional[str] = None
 
 class TroiTrackResponse(BaseModel):
     title: str
