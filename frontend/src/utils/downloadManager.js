@@ -159,6 +159,9 @@ class DownloadManager {
         embed_lyrics: embedLyrics || false,
         organization_template: organizationTemplate || "{Artist}/{Album}/{TrackNumber} - {Title}",
         group_compilations: groupCompilations !== false,
+        tidal_track_id: track.tidal_track_id,
+        tidal_artist_id: track.tidal_artist_id,
+        tidal_album_id: track.tidal_album_id,
       }));
 
       const result = await api.addToQueue(formattedTracks);
