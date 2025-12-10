@@ -99,6 +99,9 @@ export function SearchBar() {
         album: r.album,
         cover: r.cover,
         tidal_exists: true,
+        tidal_track_id: r.id,
+        tidal_artist_id: r.tidal_artist_id,
+        tidal_album_id: r.tidal_album_id,
       }));
 
     downloadManager.addToServerQueue(selectedTracks).then(result => {

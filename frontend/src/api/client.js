@@ -192,6 +192,39 @@ class ApiClient {
   }
 
   // ============================================================================
+  // LIBRARY API METHODS
+  // ============================================================================
+
+  /**
+   * Scan library for changes
+   */
+  scanLibrary(force = false) {
+    return this.get("/library/scan", { force });
+  }
+
+  /**
+   * Get all artists in library
+   */
+  getLibraryArtists() {
+    return this.get("/library/artists");
+  }
+
+  /**
+   * Get specific artist details from library
+   */
+  getLibraryArtist(artistName) {
+    return this.get(`/library/artist/${encodeURIComponent(artistName)}`);
+  }
+
+  /**
+   * Get local cover URL
+   */
+  getLocalCoverUrl(path) {
+    if (!path) return null;
+    return `${API_BASE}/library/cover?path=${encodeURIComponent(path)}`;
+  }
+
+  // ============================================================================
   // QUEUE API METHODS
   // ============================================================================
 

@@ -12,7 +12,7 @@ load_dotenv()
 # Fix path to include backend root
 sys.path.append(str(Path(__file__).parent.parent))
 
-from api.routers import system, troi, search, downloads
+from api.routers import system, troi, search, downloads, library
 from api.clients import tidal_client
 from api.utils.logging import log_warning, log_info
 from download_state import download_state_manager
@@ -53,6 +53,7 @@ app.include_router(system.router)
 app.include_router(troi.router)
 app.include_router(search.router)
 app.include_router(downloads.router)
+app.include_router(library.router)
 
 # Frontend Serving
 frontend_dist = Path(__file__).parent.parent.parent / "frontend" / "dist"

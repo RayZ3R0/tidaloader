@@ -7,6 +7,7 @@ import { SearchBar } from "./components/SearchBar";
 import { TroiGenerator } from "./components/TroiGenerator";
 import { DownloadQueuePopout } from "./components/DownloadQueuePopout";
 import { SettingsPanel } from "./components/SettingsPanel";
+import { LibraryPage } from "./components/LibraryPage";
 import { Toast } from "./components/Toast";
 
 import { ThemeToggle } from "./components/ThemeToggle";
@@ -116,11 +117,21 @@ export function App() {
           >
             Troi Playlist
           </button>
+          <button
+            class={`px-6 py-3 font-medium rounded-t-lg transition-all duration-200 ${activeTab === "library"
+              ? "bg-surface text-primary border-b-2 border-primary -mb-px"
+              : "text-text-muted hover:text-text hover:bg-surface-alt"
+              }`}
+            onClick={() => setActiveTab("library")}
+          >
+            My Library
+          </button>
         </nav>
 
         <main class="card p-6 mb-6 min-h-[400px]">
           {activeTab === "search" && <SearchBar />}
           {activeTab === "troi" && <TroiGenerator />}
+          {activeTab === "library" && <LibraryPage />}
         </main>
       </div>
     </div>

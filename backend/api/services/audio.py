@@ -129,6 +129,11 @@ async def write_metadata_tags(filepath: Path, metadata: dict):
         
         quality = metadata.get('quality', 'UNKNOWN')
         
+        log_info(f"Writing metadata for {filepath.name}")
+        log_info(f"  Tidal IDs present: Track={bool(metadata.get('tidal_track_id'))}, Album={bool(metadata.get('tidal_album_id'))}, Artist={bool(metadata.get('tidal_artist_id'))}")
+        if metadata.get('tidal_track_id'):
+             log_info(f"  Writing TIDAL_TRACK_ID: {metadata['tidal_track_id']}")
+
         if is_flac:
             log_info(f"File format: FLAC ({quality})")
             await write_flac_metadata(filepath, metadata)
@@ -181,6 +186,14 @@ async def write_flac_metadata(filepath: Path, metadata: dict):
             audio['MUSICBRAINZ_ARTISTID'] = metadata['musicbrainz_artistid']
         if metadata.get('musicbrainz_albumartistid'):
             audio['MUSICBRAINZ_ALBUMARTISTID'] = metadata['musicbrainz_albumartistid']
+
+        # Custom Tidal Tags
+        if metadata.get('tidal_track_id'):
+            audio['TIDAL_TRACK_ID'] = metadata['tidal_track_id']
+        if metadata.get('tidal_artist_id'):
+            audio['TIDAL_ARTIST_ID'] = metadata['tidal_artist_id']
+        if metadata.get('tidal_album_id'):
+            audio['TIDAL_ALBUM_ID'] = metadata['tidal_album_id']
         
         await fetch_and_store_lyrics(filepath, metadata, audio)
         
@@ -223,6 +236,14 @@ async def write_m4a_metadata(filepath: Path, metadata: dict):
             audio['\xa9day'] = metadata['date']
         if metadata.get('genre'):
             audio['\xa9gen'] = metadata['genre']
+
+        # Custom Tidal Tags (Freeform)
+        if metadata.get('tidal_track_id'):
+            audio['----:com.apple.iTunes:TIDAL_TRACK_ID'] = metadata['tidal_track_id'].encode('utf-8')
+        if metadata.get('tidal_artist_id'):
+            audio['----:com.apple.iTunes:TIDAL_ARTIST_ID'] = metadata['tidal_artist_id'].encode('utf-8')
+        if metadata.get('tidal_album_id'):
+            audio['----:com.apple.iTunes:TIDAL_ALBUM_ID'] = metadata['tidal_album_id'].encode('utf-8')
         
         if metadata.get('track_number'):
             track_num = metadata['track_number']
@@ -287,9 +308,16 @@ async def write_mp3_metadata(filepath: Path, metadata: dict):
             else:
                 tags['tracknumber'] = str(track_num)
         if metadata.get('disc_number'):
-            disc_num = metadata['disc_number']
             total_discs = metadata.get('total_discs', 0)
             tags['discnumber'] = f"{disc_num}/{total_discs}" if total_discs else str(disc_num)
+        
+        # Custom Tidal Tags (TXXX)
+        if metadata.get('tidal_track_id'):
+            tags['TXXX:TIDAL_TRACK_ID'] = metadata['tidal_track_id']
+        if metadata.get('tidal_artist_id'):
+            tags['TXXX:TIDAL_ARTIST_ID'] = metadata['tidal_artist_id']
+        if metadata.get('tidal_album_id'):
+            tags['TXXX:TIDAL_ALBUM_ID'] = metadata['tidal_album_id']
         
         tags.save()
         
@@ -354,6 +382,14 @@ async def write_opus_metadata(filepath: Path, metadata: dict):
             audio['MUSICBRAINZ_ARTISTID'] = metadata['musicbrainz_artistid']
         if metadata.get('musicbrainz_albumartistid'):
             audio['MUSICBRAINZ_ALBUMARTISTID'] = metadata['musicbrainz_albumartistid']
+
+        # Custom Tidal Tags
+        if metadata.get('tidal_track_id'):
+            audio['TIDAL_TRACK_ID'] = metadata['tidal_track_id']
+        if metadata.get('tidal_artist_id'):
+            audio['TIDAL_ARTIST_ID'] = metadata['tidal_artist_id']
+        if metadata.get('tidal_album_id'):
+            audio['TIDAL_ALBUM_ID'] = metadata['tidal_album_id']
         
         await fetch_and_store_lyrics(filepath, metadata, audio)
         

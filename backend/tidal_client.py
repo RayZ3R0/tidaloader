@@ -333,6 +333,11 @@ class TidalAPIClient:
     
     def get_artist(self, artist_id: int) -> Optional[Dict]:
         return self._make_request("/artist/", {"f": artist_id}, operation="get_artist")
+
+    def get_artist_albums(self, artist_id: int) -> Optional[Dict]:
+        """Fetch albums directly for an artist."""
+        # Try specific endpoint for albums
+        return self._make_request(f"/artist/{artist_id}/albums", operation="get_artist_albums")
     
     def get_download_status(self, track_id: int) -> Optional[Dict]:
         if track_id in self.download_status_cache:

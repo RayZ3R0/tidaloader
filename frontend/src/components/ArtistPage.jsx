@@ -96,6 +96,9 @@ export function ArtistPage({ artistId, onBack }) {
         cover: t.album?.cover,
         track_number: t.trackNumber,
         tidal_exists: true,
+        tidal_track_id: t.id,
+        tidal_artist_id: t.artist?.id || artistId,
+        tidal_album_id: t.album?.id,
       }));
 
     downloadManager.addToServerQueue(tracks).then(result => {
@@ -127,6 +130,9 @@ export function ArtistPage({ artistId, onBack }) {
           cover: album.cover,
           track_number: t.trackNumber || index + 1,
           tidal_exists: true,
+          tidal_track_id: t.id,
+          tidal_artist_id: t.tidal_artist_id || t.artist?.id,
+          tidal_album_id: t.tidal_album_id || album.id,
         }));
 
         const res = await downloadManager.addToServerQueue(tracks);
@@ -172,6 +178,9 @@ export function ArtistPage({ artistId, onBack }) {
           cover: album.cover,
           track_number: t.trackNumber || index + 1,
           tidal_exists: true,
+          tidal_track_id: t.id,
+          tidal_artist_id: t.tidal_artist_id || t.artist?.id,
+          tidal_album_id: t.tidal_album_id || album.id,
         }));
 
         const res = await downloadManager.addToServerQueue(tracks);
@@ -619,6 +628,9 @@ function AlbumTracksModal({ album, onClose }) {
         cover: album.cover,
         track_number: t.trackNumber || index + 1,
         tidal_exists: true,
+        tidal_track_id: t.id,
+        tidal_artist_id: t.tidal_artist_id || t.artist?.id,
+        tidal_album_id: t.tidal_album_id || album.id,
       }));
 
     downloadManager.addToServerQueue(tracksToDownload).then(res => {

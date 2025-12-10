@@ -98,6 +98,9 @@ export function AlbumPage({ albumId, onBack }) {
         track_number: t.trackNumber || t.track_number || (index + 1),
         cover: album?.cover || t.cover,
         tidal_exists: true,
+        tidal_track_id: t.id,
+        tidal_artist_id: t.tidal_artist_id,
+        tidal_album_id: t.tidal_album_id,
       }));
 
     downloadManager.addToServerQueue(selectedTrackList).then(result => {
