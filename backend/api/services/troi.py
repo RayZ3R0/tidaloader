@@ -57,6 +57,8 @@ async def troi_generate_with_progress(username: str, playlist_type: str, progres
                 "artist": track.artist,
                 "mbid": track.mbid,
                 "tidal_id": track.tidal_id,
+                "tidal_artist_id": track.tidal_artist_id,
+                "tidal_album_id": track.tidal_album_id,
                 "tidal_exists": track.tidal_exists,
                 "album": track.album
             })

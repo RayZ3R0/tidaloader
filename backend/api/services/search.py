@@ -17,9 +17,11 @@ async def search_track_with_fallback(artist: str, title: str, track_obj) -> bool
         if tidal_tracks and len(tidal_tracks) > 0:
             first_track = tidal_tracks[0]
             track_obj.tidal_id = first_track.get('id')
+            track_obj.tidal_artist_id = first_track.get('artist', {}).get('id')
+            album_data = first_track.get('album', {})
+            track_obj.tidal_album_id = album_data.get('id') if isinstance(album_data, dict) else None
             track_obj.tidal_exists = True
             
-            album_data = first_track.get('album', {})
             track_obj.album = album_data.get('title') if isinstance(album_data, dict) else None
             
             log_success(f"Found on Tidal - ID: {track_obj.tidal_id}")
@@ -42,9 +44,11 @@ async def search_track_with_fallback(artist: str, title: str, track_obj) -> bool
             if tidal_tracks and len(tidal_tracks) > 0:
                 first_track = tidal_tracks[0]
                 track_obj.tidal_id = first_track.get('id')
+                track_obj.tidal_artist_id = first_track.get('artist', {}).get('id')
+                album_data = first_track.get('album', {})
+                track_obj.tidal_album_id = album_data.get('id') if isinstance(album_data, dict) else None
                 track_obj.tidal_exists = True
                 
-                album_data = first_track.get('album', {})
                 track_obj.album = album_data.get('title') if isinstance(album_data, dict) else None
                 
                 log_success(f"Found via romanization - ID: {track_obj.tidal_id}")

@@ -121,7 +121,15 @@ export function TroiGenerator() {
   };
 
   const handleDownload = () => {
-    const selectedTracks = tracks.filter((t) => selected.has(t.tidal_id));
+    const selectedTracks = tracks
+      .filter((t) => selected.has(t.tidal_id))
+      .map(t => ({
+        ...t,
+        tidal_track_id: t.tidal_id,
+        tidal_artist_id: t.tidal_artist_id,
+        tidal_album_id: t.tidal_album_id
+      }));
+
     downloadManager.addToServerQueue(selectedTracks).then(result => {
       addToast(
         `Added ${result.added} tracks to download queue`,
@@ -217,12 +225,12 @@ export function TroiGenerator() {
               <div
                 key={idx}
                 class={`flex items-start gap-2 ${log.type === "error"
-                    ? "text-red-600"
-                    : log.type === "success"
-                      ? "text-green-600"
-                      : log.type === "validating"
-                        ? "text-blue-600"
-                        : "text-text-muted"
+                  ? "text-red-600"
+                  : log.type === "success"
+                    ? "text-green-600"
+                    : log.type === "validating"
+                      ? "text-blue-600"
+                      : "text-text-muted"
                   }`}
               >
                 <span class="flex-shrink-0">
@@ -280,10 +288,10 @@ export function TroiGenerator() {
               <label
                 key={idx}
                 class={`search-result-card ${track.tidal_exists
-                    ? selected.has(track.tidal_id)
-                      ? "selected"
-                      : ""
-                    : "opacity-60 cursor-not-allowed"
+                  ? selected.has(track.tidal_id)
+                    ? "selected"
+                    : ""
+                  : "opacity-60 cursor-not-allowed"
                   }`}
               >
                 <input
