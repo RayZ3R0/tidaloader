@@ -89,41 +89,85 @@ export function LibraryPage() {
             ) : (
                 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                     {artists.map((artist) => (
-                        <div
+                        <ArtistCard
                             key={artist.name}
+                            artist={artist}
                             onClick={() => setSelectedArtist(artist)}
-                            class="group cursor-pointer p-4 rounded-xl bg-surface-alt/50 hover:bg-surface-alt border border-transparent hover:border-border transition-all duration-200"
-                        >
-                            <div class="aspect-square mb-3 rounded-full overflow-hidden bg-surface shadow-sm group-hover:shadow-md transition-all">
-                                {artist.image ? (
-                                    <img
-                                        src={api.getLocalCoverUrl(artist.image)}
-                                        alt={artist.name}
-                                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                        loading="lazy"
-                                        onError={(e) => {
-                                            e.target.onerror = null;
-                                            e.target.style.display = 'none';
-                                            e.target.nextSibling.style.display = 'flex';
-                                        }}
-                                    />
-                                ) : null}
-                                <div class="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-primary font-bold text-2xl" style={{ display: artist.image ? 'none' : 'flex' }}>
-                                    {artist.name.charAt(0)}
-                                </div>
-                            </div>
-                            <div class="text-center">
-                                <h3 class="font-bold text-text truncate group-hover:text-primary transition-colors">
-                                    {artist.name}
-                                </h3>
-                                <p class="text-xs text-text-muted mt-1">
-                                    {artist.album_count} albums • {artist.track_count} tracks
-                                </p>
-                            </div>
-                        </div>
+                        />
                     ))}
                 </div>
             )}
+        </div>
+    );
+}
+
+function ArtistCard({ artist, onClick }) {
+    const [picture, setPicture] = useState(artist.picture);
+    const [loadingImage, setLoadingImage] = useState(false);
+
+    useEffect(() => {
+        // Lazy load Tidal picture if missing
+        if (!picture && !artist.image && artist.tidal_id) {
+            setLoadingImage(true);
+            api.getArtist(artist.tidal_id)
+                .then(details => {
+                    if (details.artist?.picture) {
+                        setPicture(details.artist.picture);
+                        // Persist to backend cache
+                        api.updateLibraryArtist(artist.name, { picture: details.artist.picture })
+                            .catch(e => console.warn("Failed to cache artist picture", e));
+                    }
+                })
+                .catch(err => console.debug(`Failed to fetch picture for ${artist.name}`, err))
+                .finally(() => setLoadingImage(false));
+        }
+    }, [artist]);
+
+    // Determine which image to show
+    // Priority: Tidal Picture (URL) > Local Image (Path)
+    const imageUrl = picture
+        ? api.getCoverUrl(picture, 320)
+        : (artist.image ? api.getLocalCoverUrl(artist.image) : null);
+
+    return (
+        <div
+            onClick={onClick}
+            class="group cursor-pointer p-4 rounded-xl bg-surface-alt/50 hover:bg-surface-alt border border-transparent hover:border-border transition-all duration-200"
+        >
+            <div class="aspect-square mb-3 rounded-full overflow-hidden bg-surface shadow-sm group-hover:shadow-md transition-all relative">
+                {imageUrl ? (
+                    <img
+                        src={imageUrl}
+                        alt={artist.name}
+                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        loading="lazy"
+                        onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'flex';
+                        }}
+                    />
+                ) : null}
+
+                {/* Fallback / Loading State */}
+                <div
+                    class="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-primary font-bold text-2xl absolute inset-0"
+                    style={{ display: imageUrl ? 'none' : 'flex' }}
+                >
+                    {loadingImage ? (
+                        <div class="animate-spin text-primary">⟳</div>
+                    ) : (
+                        artist.name.charAt(0)
+                    )}
+                </div>
+            </div>
+            <div class="text-center">
+                <h3 class="font-bold text-text truncate group-hover:text-primary transition-colors">
+                    {artist.name}
+                </h3>
+                <p class="text-xs text-text-muted mt-1">
+                    {artist.album_count} albums • {artist.track_count} tracks
+                </p>
+            </div>
         </div>
     );
 }

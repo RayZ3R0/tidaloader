@@ -144,11 +144,15 @@ class LibraryService:
                         
                         # Initialize Artist
                         if artist not in artists_data:
+                            # Try to recover metadata from old cache
+                            old_data = self.library_data['artists'].get(artist, {})
+                            
                             artists_data[artist] = {
                                 "name": artist,
                                 "albums": {},
                                 "track_count": 0,
-                                "tidal_id": meta.get('tidal_artist_id') # Capture Tidal ID if available
+                                "tidal_id": meta.get('tidal_artist_id') or old_data.get('tidal_id'),
+                                "picture": old_data.get('picture') # Preserve Tidal picture
                             }
                         elif not artists_data[artist].get("tidal_id") and meta.get('tidal_artist_id'):
                             # Update existing artist with ID if found later
@@ -212,6 +216,8 @@ class LibraryService:
                 "track_count": data["track_count"],
                 "track_count": data["track_count"],
                 "image": image,
+                "image": image, # Local cover
+                "picture": data.get("picture"), # Tidal picture UUID
                 "tidal_id": data.get("tidal_id")
             })
         

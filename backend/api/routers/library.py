@@ -40,6 +40,28 @@ async def get_library_artist(artist_name: str, username: str = Depends(require_a
         log_error(f"Error getting library artist {artist_name}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+from pydantic import BaseModel
+
+class ArtistMetadataUpdate(BaseModel):
+    picture: Optional[str] = None
+
+@router.patch("/api/library/artist/{artist_name}")
+async def update_artist_metadata(
+    artist_name: str, 
+    metadata: ArtistMetadataUpdate,
+    username: str = Depends(require_auth)
+):
+    try:
+        success = library_service.update_artist_metadata(artist_name, picture=metadata.picture)
+        if not success:
+            raise HTTPException(status_code=404, detail="Artist not found")
+        return {"status": "success"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        log_error(f"Error updating artist {artist_name}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/api/library/cover")
 async def get_local_cover(path: str, username: str = Depends(require_auth)):
     """Serve local cover image"""

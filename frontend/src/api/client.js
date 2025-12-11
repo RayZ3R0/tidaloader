@@ -224,6 +224,36 @@ class ApiClient {
     return `${API_BASE}/library/cover?path=${encodeURIComponent(path)}`;
   }
 
+  /**
+   * Update artist metadata (e.g. picture)
+   */
+  updateLibraryArtist(artistName, metadata) {
+    return this.patch(`/library/artist/${encodeURIComponent(artistName)}`, metadata);
+  }
+
+  /**
+   * Make PATCH request with auth
+   */
+  async patch(path, data = {}) {
+    const response = await fetch(API_BASE + path, {
+      method: "PATCH",
+      headers: this.getHeaders(),
+      body: JSON.stringify(data),
+      credentials: "include",
+    });
+
+    if (response.status === 401) {
+      useAuthStore.getState().clearCredentials();
+      throw new Error("Authentication required");
+    }
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: response.statusText }));
+      throw new Error(error.detail || `HTTP ${response.status}`);
+    }
+    return response.json();
+  }
+
   // ============================================================================
   // QUEUE API METHODS
   // ============================================================================
