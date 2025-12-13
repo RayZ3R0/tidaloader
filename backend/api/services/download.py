@@ -139,6 +139,14 @@ async def download_file_async(
         display_name = final_path.name if final_path else filename
         log_success(f"Downloaded: {display_name} ({file_size_mb:.2f} MB)")
         log_info(f"Location: {final_path}")
+        
+        # Invalidate library cache so the new file/tags appear immediately
+        try:
+             from api.services.library import library_service
+             library_service.invalidate_cache()
+        except Exception as e:
+             log_warning(f"Failed to invalidate library cache: {e}")
+
         print(f"{'='*60}\n")
         
         await asyncio.sleep(5)

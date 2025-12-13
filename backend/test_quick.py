@@ -15,7 +15,7 @@ def test_root():
         data = response.json()
         print(f"Response: {json.dumps(data, indent=2)}")
         
-        if data.get("message") == "Troi Tidal Downloader API":
+        if data.get("message") == "Tidaloader API":
             print("✓ Correct API responding")
         else:
             print("✗ Wrong service responding!")
@@ -66,7 +66,7 @@ def test_album_search():
         raise
 
 if __name__ == "__main__":
-    print("🧪 Testing Troi Tidal Downloader API")
+    print("🧪 Testing Tidaloader API")
     print(f"Base URL: {BASE_URL}\n")
     print("="*50 + "\n")
     

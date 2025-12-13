@@ -95,9 +95,13 @@ export function AlbumPage({ albumId, onBack }) {
         title: t.title,
         artist: t.artist || album?.artist?.name || "Unknown Artist",
         album: album?.title || t.album,
+        album_artist: t.albumArtist || album?.artist?.name, // Use backend albumArtist or fallback
         track_number: t.trackNumber || t.track_number || (index + 1),
         cover: album?.cover || t.cover,
         tidal_exists: true,
+        tidal_track_id: t.id,
+        tidal_artist_id: t.tidal_artist_id || album?.artist?.id,
+        tidal_album_id: t.tidal_album_id || album?.id,
       }));
 
     downloadManager.addToServerQueue(selectedTrackList).then(result => {

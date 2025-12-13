@@ -34,6 +34,7 @@ Heavily inspired from https://github.com/uimaxbai/tidal-ui and using https://git
   - **AAC**: 320kbps / 96kbps
 - **Smart Playlists**: Generate "Daily Jams" using ListenBrainz history + Troi.
 - **Rich Metadata**: Auto-tagging with MusicBrainz IDs, Artist/Album organization, and embedded covers.
+- **Intelligent Library**: Strict ID-based album matching prevents duplicates. Artist covers are automatically fetched and cached for a beautiful, persistent browsing experience.
 - **Lyrics**: Synced (`.lrc`) and plain text lyrics via LrcLib.
 - **Queue Management**: Concurrent downloads, auto-retry, and persistence.
 - **Resilience**: Automatic rotation of Tidal API tokens and endpoints.
@@ -157,4 +158,6 @@ Inspired by [tidal-ui](https://github.com/uimaxbai/tidal-ui). Playlist generatio
 
 ## License
 
-Personal/Educational use only. Respect copyright laws.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+> **Disclaimer**: This project is for educational purposes only. The developers do not endorse piracy and are not responsible for how this software is used. Please support artists by purchasing their music.

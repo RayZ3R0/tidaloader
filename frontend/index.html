@@ -1,24 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Troi Tidal Downloader</title>
-  </head>
-  <body>
-    <div id="app"></div>
-    <script>
-      (function () {
-        try {
-          var localTheme = localStorage.getItem("theme");
-          var supportDarkMode =
-            window.matchMedia("(prefers-color-scheme: dark)").matches === true;
-          if (localTheme === "dark" || (!localTheme && supportDarkMode)) {
-            document.documentElement.classList.add("dark");
-          }
-        } catch (e) {}
-      })();
-    </script>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tidaloader</title>
+  <link rel="icon" href="/favicon.ico?v=3" />
+</head>
+
+<body>
+  <div id="app"></div>
+  <script>
+    (function () {
+      try {
+        var localTheme = localStorage.getItem("theme");
+        var supportDarkMode =
+          window.matchMedia("(prefers-color-scheme: dark)").matches === true;
+        if (localTheme === "dark" || (!localTheme && supportDarkMode)) {
+          document.documentElement.classList.add("dark");
+        }
+      } catch (e) { }
+    })();
+  </script>
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+
 </html>

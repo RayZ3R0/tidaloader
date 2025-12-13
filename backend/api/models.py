@@ -14,6 +14,10 @@ class TrackSearchResult(BaseModel):
     duration: Optional[int] = None
     cover: Optional[str] = None
     quality: Optional[str] = None
+    trackNumber: Optional[int] = None
+    albumArtist: Optional[str] = None
+    tidal_artist_id: Optional[int] = None
+    tidal_album_id: Optional[int] = None
 
 class PlaylistSearchResult(BaseModel):
     id: str
@@ -44,3 +48,6 @@ class DownloadTrackRequest(BaseModel):
     group_compilations: Optional[bool] = True
     run_beets: Optional[bool] = False
     embed_lyrics: Optional[bool] = False
+    tidal_track_id: Optional[str] = None
+    tidal_artist_id: Optional[str] = None
+    tidal_album_id: Optional[str] = None

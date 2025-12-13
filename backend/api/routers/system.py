@@ -4,7 +4,7 @@ router = APIRouter()
 
 @router.get("/api")
 async def api_root():
-    return {"status": "ok", "message": "Troi Tidal Downloader API"}
+    return {"status": "ok", "message": "Tidaloader API"}
 
 @router.get("/api/health")
 async def health_check():

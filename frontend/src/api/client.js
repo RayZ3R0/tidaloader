@@ -1,5 +1,5 @@
 /**
- * API client for Troi Tidal Downloader backend
+ * API client for Tidaloader backend
  */
 
 import { useAuthStore } from "../store/authStore";
@@ -228,6 +228,69 @@ class ApiClient {
 
   get baseUrl() {
     return window.location.origin;
+  }
+
+  // ============================================================================
+  // LIBRARY API METHODS
+  // ============================================================================
+
+  /**
+   * Scan library for changes
+   */
+  scanLibrary(force = false) {
+    return this.get("/library/scan", { force });
+  }
+
+  /**
+   * Get all artists in library
+   */
+  getLibraryArtists() {
+    return this.get("/library/artists");
+  }
+
+  /**
+   * Get specific artist details from library
+   */
+  getLibraryArtist(artistName) {
+    return this.get(`/library/artist/${encodeURIComponent(artistName)}`);
+  }
+
+  /**
+   * Get local cover URL
+   */
+  getLocalCoverUrl(path) {
+    if (!path) return null;
+    return `${API_BASE}/library/cover?path=${encodeURIComponent(path)}`;
+  }
+
+  /**
+   * Update artist metadata (e.g. picture)
+   */
+  updateLibraryArtist(artistName, metadata) {
+    return this.patch(`/library/artist/${encodeURIComponent(artistName)}`, metadata);
+  }
+
+  /**
+   * Make PATCH request with auth
+   */
+  async patch(path, data = {}) {
+    const response = await fetch(API_BASE + path, {
+      method: "PATCH",
+      headers: this.getHeaders(),
+      body: JSON.stringify(data),
+      credentials: "include",
+    });
+
+    if (response.status === 401) {
+      useAuthStore.getState().clearCredentials();
+      throw new Error("Authentication required");
+    }
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: response.statusText }));
+      throw new Error(error.detail || `HTTP ${response.status}`);
+    }
+    return response.json();
   }
 
   // ============================================================================

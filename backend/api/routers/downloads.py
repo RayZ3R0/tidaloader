@@ -278,6 +278,11 @@ async def download_track_server_side(
                 metadata['total_tracks'] = album_data.get('numberOfTracks')
                 metadata['total_discs'] = album_data.get('numberOfVolumes')
                 
+                # Add Tidal IDs for precise matching
+                metadata['tidal_track_id'] = str(track_data.get('id', ''))
+                metadata['tidal_artist_id'] = str(artist_data.get('id', ''))
+                metadata['tidal_album_id'] = str(album_data.get('id', ''))
+                
                 cover_id = album_data.get('cover')
                 if cover_id:
                     cover_id_str = str(cover_id).replace('-', '/')
@@ -413,9 +418,15 @@ class QueueTrackItem(BaseModel):
     title: str
     artist: str
     album: Optional[str] = ""
+    album_artist: Optional[str] = "" 
     album_id: Optional[int] = None
     track_number: Optional[int] = None
     cover: Optional[str] = None
+    
+    # Tidal IDs
+    tidal_track_id: Optional[str] = None
+    tidal_artist_id: Optional[str] = None
+    tidal_album_id: Optional[str] = None
     quality: str = "HIGH"
     target_format: Optional[str] = None
     bitrate_kbps: Optional[int] = None
@@ -441,6 +452,11 @@ async def add_to_queue(
     username: str = Depends(require_auth)
 ):
     """Add tracks to the download queue"""
+    if request.tracks:
+        first = request.tracks[0]
+        log_info(f"[API] Queue Add Request: {len(request.tracks)} items. First Item: {first.title} ({first.artist})")
+        log_info(f"[API] Incoming IDs for first item: Track={first.tidal_track_id}, Artist={first.tidal_artist_id}, Album={first.tidal_album_id}")
+
     items = []
     for track in request.tracks:
         item = QueueItem(
@@ -448,10 +464,14 @@ async def add_to_queue(
             title=track.title,
             artist=track.artist,
             album=track.album or "",
+            album_artist=track.album_artist or "",  # Capture Album Artist
             album_id=track.album_id,
             track_number=track.track_number,
             cover=track.cover,
-            quality=track.quality,
+            quality=track.quality or "HIGH", # Default to HIGH if not specified
+            tidal_track_id=track.tidal_track_id,
+            tidal_artist_id=track.tidal_artist_id,
+            tidal_album_id=track.tidal_album_id,
             target_format=track.target_format,
             bitrate_kbps=track.bitrate_kbps,
             run_beets=track.run_beets,
@@ -570,8 +590,13 @@ async def process_queue_item(item: QueueItem):
         # Get track playback info (stream URL, manifest) from API
         track_info = tidal_client.get_track(track_id, source_quality)
         if not track_info:
-            raise Exception("Track not found")
-        
+            raise Exception("Track not found (Playback Info)")
+
+        if isinstance(track_info, list) and len(track_info) > 0:
+            track_data = track_info[0]
+        else:
+            track_data = track_info 
+
         # Build metadata - use queue item data (passed from frontend)
         # Frontend components now correctly pass cover and track_number
         metadata = {
@@ -580,7 +605,11 @@ async def process_queue_item(item: QueueItem):
             'title': item.title,
             'artist': item.artist,
             'album': item.album,
+            'album_artist': item.album_artist or item.artist, # Use passed album_artist or fallback to artist
             'track_number': item.track_number,
+            'tidal_track_id': item.tidal_track_id or str(track_id),
+            'tidal_artist_id': item.tidal_artist_id,
+            'tidal_album_id': item.tidal_album_id,
         }
         
         if is_mp3_request:
@@ -594,6 +623,18 @@ async def process_queue_item(item: QueueItem):
         if item.cover:
             cover_id_str = str(item.cover).replace('-', '/')
             metadata['cover_url'] = f"https://resources.tidal.com/images/{cover_id_str}/640x640.jpg"
+            
+        # DEBUG LOGGING
+        log_info(f"[Queue] Extracted IDs for {item.title}:")
+        log_info(f"  Track ID: {metadata.get('tidal_track_id')}")
+        log_info(f"  Artist ID: {metadata.get('tidal_artist_id')}")
+        log_info(f"  Album ID: {metadata.get('tidal_album_id')}")
+        # DEBUG LOGGING
+        log_info(f"[Queue] Extracted IDs for {item.title}:")
+        log_info(f"  Track ID: {metadata.get('tidal_track_id')}")
+        log_info(f"  Artist ID: {metadata.get('tidal_artist_id')}")
+        log_info(f"  Album ID: {metadata.get('tidal_album_id')}")
+        log_info(f"  From Queue Item: {bool(item.tidal_artist_id)}")
         
         # Get stream URL
         stream_url = extract_stream_url(track_info)

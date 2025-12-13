@@ -63,3 +63,5 @@ backend/download_state.json
 backend/tidaloader_beets.yaml
 tidal-ui-analysis/
 backend/queue_state.json
+
+backend/api/.cache

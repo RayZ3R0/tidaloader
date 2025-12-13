@@ -101,7 +101,12 @@ export function SearchBar() {
         artist: r.artist,
         album: r.album,
         cover: r.cover,
+        track_number: r.trackNumber,  // Pass track number from search results
+        album_artist: r.albumArtist || r.artist, // Pass album artist
         tidal_exists: true,
+        tidal_track_id: r.id,
+        tidal_artist_id: r.tidal_artist_id,
+        tidal_album_id: r.tidal_album_id,
       }));
 
     downloadManager.addToServerQueue(selectedTracks).then(result => {

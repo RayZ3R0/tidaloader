@@ -4,49 +4,481 @@
 
 @layer base {
   :root {
-    /* Light Mode Colors */
-    --color-primary: 127 166 80; /* #7fa650 */
-    --color-primary-light: 166 201 119; /* #a6c977 */
-    --color-primary-dark: 95 127 60; /* #5f7f3c */
-    
-    --color-secondary: 111 117 95; /* #6f755f */
-    --color-secondary-light: 138 144 122; /* #8a907a */
-    --color-secondary-dark: 84 90 68; /* #545a44 */
-    
-    --color-background: 247 244 233; /* #f7f4e9 */
-    --color-background-alt: 236 232 217; /* #ece8d9 */
-    
-    --color-surface: 255 255 255; /* #ffffff */
-    --color-surface-alt: 242 240 229; /* #f2f0e5 */
-    
-    --color-text: 58 64 50; /* #3a4032 */
-    --color-text-muted: 111 117 95; /* #6f755f */
-    
-    --color-border: 211 209 197; /* #d3d1c5 */
-    --color-border-light: 230 228 217; /* #e6e4d9 */
+    /* Default - Light Mode Colors (Base) */
+    --color-primary: 127 166 80;
+    --color-primary-light: 166 201 119;
+    --color-primary-dark: 95 127 60;
+
+    --color-secondary: 111 117 95;
+    --color-secondary-light: 138 144 122;
+    --color-secondary-dark: 84 90 68;
+
+    --color-background: 247 244 233;
+    --color-background-alt: 236 232 217;
+
+    --color-surface: 255 255 255;
+    --color-surface-alt: 242 240 229;
+
+    --color-text: 58 64 50;
+    --color-text-muted: 111 117 95;
+
+    --color-border: 211 209 197;
+    --color-border-light: 230 228 217;
   }
 
   .dark {
-    /* Dark Mode Colors */
-    --color-primary: 127 166 80; /* #7fa650 - Keep brand color */
-    --color-primary-light: 166 201 119; /* #a6c977 */
-    --color-primary-dark: 95 127 60; /* #5f7f3c */
-    
-    --color-secondary: 138 144 122; /* #8a907a */
+    /* Dark Mode Colors (Default Dark) */
+    --color-primary: 127 166 80;
+    --color-primary-light: 166 201 119;
+    --color-primary-dark: 95 127 60;
+
+    --color-secondary: 138 144 122;
     --color-secondary-light: 158 164 142;
     --color-secondary-dark: 111 117 95;
-    
-    --color-background: 20 22 18; /* Darker background */
+
+    --color-background: 20 22 18;
     --color-background-alt: 28 30 24;
-    
-    --color-surface: 32 34 28; /* Dark surface */
+
+    --color-surface: 32 34 28;
     --color-surface-alt: 40 42 36;
-    
-    --color-text: 236 232 217; /* Light text */
+
+    --color-text: 236 232 217;
     --color-text-muted: 158 164 142;
-    
+
     --color-border: 58 64 50;
     --color-border-light: 44 48 40;
+  }
+
+  /* Catppuccin Latte */
+  .catppuccin-latte {
+    --color-primary: 136 57 239;
+    --color-primary-light: 156 77 255;
+    --color-primary-dark: 116 38 214;
+
+    --color-secondary: 124 127 147;
+    --color-secondary-light: 156 160 176;
+    --color-secondary-dark: 108 111 130;
+
+    --color-background: 239 241 245;
+    --color-background-alt: 230 233 239;
+
+    --color-surface: 255 255 255;
+    --color-surface-alt: 204 208 218;
+
+    --color-text: 76 79 105;
+    --color-text-muted: 140 143 161;
+
+    --color-border: 204 208 218;
+    --color-border-light: 188 192 204;
+  }
+
+  /* Catppuccin Frappe */
+  .catppuccin-frappe {
+    --color-primary: 202 158 230;
+    --color-primary-light: 229 194 255;
+    --color-primary-dark: 181 126 220;
+
+    --color-secondary: 165 173 206;
+    --color-secondary-light: 181 191 226;
+    --color-secondary-dark: 148 156 187;
+
+    --color-background: 48 52 70;
+    --color-background-alt: 41 44 60;
+
+    --color-surface: 65 69 89;
+    --color-surface-alt: 81 87 109;
+
+    --color-text: 198 208 245;
+    --color-text-muted: 165 173 206;
+
+    --color-border: 81 87 109;
+    --color-border-light: 98 104 128;
+  }
+
+  /* Catppuccin Macchiato */
+  .catppuccin-macchiato {
+    --color-primary: 198 160 246;
+    --color-primary-light: 221 182 255;
+    --color-primary-dark: 177 140 220;
+
+    --color-secondary: 165 173 203;
+    --color-secondary-light: 184 192 220;
+    --color-secondary-dark: 147 154 183;
+
+    --color-background: 36 39 58;
+    --color-background-alt: 30 32 48;
+
+    --color-surface: 54 58 79;
+    --color-surface-alt: 73 77 100;
+
+    --color-text: 202 211 245;
+    --color-text-muted: 165 173 203;
+
+    --color-border: 73 77 100;
+    --color-border-light: 91 96 120;
+  }
+
+  /* Catppuccin Mocha */
+  .catppuccin-mocha {
+    --color-primary: 203 166 247;
+    --color-primary-light: 228 187 255;
+    --color-primary-dark: 181 145 221;
+
+    --color-secondary: 166 173 200;
+    --color-secondary-light: 186 194 222;
+    --color-secondary-dark: 147 153 178;
+
+    --color-background: 30 30 46;
+    --color-background-alt: 24 24 37;
+
+    --color-surface: 49 50 68;
+    --color-surface-alt: 69 71 90;
+
+    --color-text: 205 214 244;
+    --color-text-muted: 166 173 200;
+
+    --color-border: 69 71 90;
+    --color-border-light: 88 91 112;
+  }
+
+  /* Matcha Theme */
+  .matcha {
+    --color-primary: 127 166 80;
+    --color-primary-light: 166 201 119;
+    --color-primary-dark: 95 127 60;
+
+    --color-secondary: 111 117 95;
+    --color-secondary-light: 138 144 122;
+    --color-secondary-dark: 84 90 68;
+
+    --color-background: 247 244 233;
+    --color-background-alt: 236 232 217;
+
+    --color-surface: 255 255 255;
+    --color-surface-alt: 242 240 229;
+
+    --color-text: 58 64 50;
+    --color-text-muted: 111 117 95;
+
+    --color-border: 211 209 197;
+    --color-border-light: 230 228 217;
+  }
+
+  /* Nord Theme */
+  .nord {
+    --color-primary: 136 192 208;
+    --color-primary-light: 163 190 140;
+    --color-primary-dark: 94 129 172;
+
+    --color-secondary: 129 161 193;
+    --color-secondary-light: 136 192 208;
+    --color-secondary-dark: 94 129 172;
+
+    --color-background: 46 52 64;
+    --color-background-alt: 59 66 82;
+
+    --color-surface: 67 76 94;
+    --color-surface-alt: 76 86 106;
+
+    --color-text: 236 239 244;
+    --color-text-muted: 216 222 233;
+
+    --color-border: 81 96 119;
+    --color-border-light: 94 110 135;
+  }
+
+  /* Gruvbox Theme */
+  .gruvbox {
+    --color-primary: 142 192 124;
+    --color-primary-light: 184 187 38;
+    --color-primary-dark: 131 165 152;
+
+    --color-secondary: 146 131 116;
+    --color-secondary-light: 168 153 132;
+    --color-secondary-dark: 124 111 100;
+
+    --color-background: 40 40 40;
+    --color-background-alt: 60 56 54;
+
+    --color-surface: 29 32 33;
+    --color-surface-alt: 50 48 47;
+
+    --color-text: 235 219 178;
+    --color-text-muted: 213 196 161;
+
+    --color-border: 124 111 100;
+    --color-border-light: 146 131 116;
+  }
+
+  /* Dracula Theme (Dark) */
+  .dracula {
+    --color-primary: 189 147 249;
+    --color-primary-light: 214 186 255;
+    --color-primary-dark: 158 108 240;
+
+    --color-secondary: 255 121 198;
+    --color-secondary-light: 255 155 219;
+    --color-secondary-dark: 219 91 176;
+
+    --color-background: 40 42 54;
+    --color-background-alt: 52 55 70;
+
+    --color-surface: 68 71 90;
+    --color-surface-alt: 77 81 113;
+
+    --color-text: 248 248 242;
+    --color-text-muted: 191 191 191;
+
+    --color-border: 119 123 156;
+    --color-border-light: 139 143 176;
+  }
+
+  /* Solarized Light */
+  .solarized-light {
+    --color-primary: 38 139 210;
+    --color-primary-light: 76 164 228;
+    --color-primary-dark: 9 105 162;
+
+    --color-secondary: 42 161 152;
+    --color-secondary-light: 68 195 185;
+    --color-secondary-dark: 26 129 122;
+
+    --color-background: 253 246 227;
+    --color-background-alt: 238 232 213;
+
+    --color-surface: 254 254 254;
+    --color-surface-alt: 239 239 239;
+
+    --color-text: 7 54 66;
+    --color-text-muted: 88 110 117;
+
+    --color-border: 224 224 224;
+    --color-border-light: 238 238 238;
+  }
+
+  /* Solarized Dark */
+  .solarized-dark {
+    --color-primary: 38 139 210;
+    --color-primary-light: 76 164 228;
+    --color-primary-dark: 9 105 162;
+
+    --color-secondary: 42 161 152;
+    --color-secondary-light: 68 195 185;
+    --color-secondary-dark: 26 129 122;
+
+    --color-background: 0 43 54;
+    --color-background-alt: 7 54 66;
+
+    --color-surface: 7 54 66;
+    --color-surface-alt: 17 71 82;
+
+    --color-text: 253 246 227;
+    --color-text-muted: 147 161 161;
+
+    --color-border: 88 110 117;
+    --color-border-light: 101 123 131;
+  }
+
+  /* Rose Pine (Dark) */
+  .rose-pine {
+    --color-primary: 235 188 186;
+    --color-primary-light: 244 203 201;
+    --color-primary-dark: 228 168 168;
+
+    --color-secondary: 246 193 119;
+    --color-secondary-light: 251 205 141;
+    --color-secondary-dark: 224 167 85;
+
+    --color-background: 25 23 36;
+    --color-background-alt: 31 29 46;
+
+    --color-surface: 38 35 58;
+    --color-surface-alt: 42 39 63;
+
+    --color-text: 224 222 244;
+    --color-text-muted: 144 140 170;
+
+    --color-border: 64 61 88;
+    --color-border-light: 82 79 103;
+  }
+
+  /* Tokyo Night (Dark) */
+  .tokyo-night {
+    --color-primary: 122 162 247;
+    --color-primary-light: 150 177 250;
+    --color-primary-dark: 93 135 230;
+
+    --color-secondary: 187 154 247;
+    --color-secondary-light: 201 175 250;
+    --color-secondary-dark: 165 119 243;
+
+    --color-background: 26 27 38;
+    --color-background-alt: 36 40 59;
+
+    --color-surface: 47 53 73;
+    --color-surface-alt: 53 59 84;
+
+    --color-text: 192 202 245;
+    --color-text-muted: 169 177 214;
+
+    --color-border: 65 72 104;
+    --color-border-light: 84 92 126;
+  }
+
+  /* Crimson Theme (Dark) */
+  .crimson {
+    --color-primary: 229 57 53;
+    --color-primary-light: 255 102 89;
+    --color-primary-dark: 171 0 13;
+
+    --color-secondary: 255 138 128;
+    --color-secondary-light: 255 188 175;
+    --color-secondary-dark: 200 90 84;
+
+    --color-background: 26 26 26;
+    --color-background-alt: 37 37 37;
+
+    --color-surface: 45 45 45;
+    --color-surface-alt: 53 53 53;
+
+    --color-text: 245 245 245;
+    --color-text-muted: 179 179 179;
+
+    --color-border: 68 68 68;
+    --color-border-light: 85 85 85;
+  }
+
+  .kanagawa {
+    --color-primary: 126 156 216;
+    --color-primary-light: 163 193 240;
+    --color-primary-dark: 92 122 176;
+
+    --color-secondary: 210 126 153;
+    --color-secondary-light: 232 166 186;
+    --color-secondary-dark: 168 92 117;
+
+    --color-background: 31 31 40;
+    --color-background-alt: 42 42 55;
+
+    --color-surface: 84 84 109;
+    --color-surface-alt: 105 105 132;
+
+    --color-text: 220 215 186;
+    --color-text-muted: 163 163 163;
+
+    --color-border: 114 114 149;
+    --color-border-light: 144 144 167;
+  }
+
+  .one-dark {
+    --color-primary: 97 175 239;
+    --color-primary-light: 137 199 255;
+    --color-primary-dark: 66 133 180;
+
+    --color-secondary: 224 108 117;
+    --color-secondary-light: 255 143 153;
+    --color-secondary-dark: 185 78 86;
+
+    --color-background: 40 44 52;
+    --color-background-alt: 46 51 61;
+
+    --color-surface: 62 68 81;
+    --color-surface-alt: 75 82 99;
+
+    --color-text: 171 178 191;
+    --color-text-muted: 130 137 151;
+
+    --color-border: 92 99 112;
+    --color-border-light: 104 111 127;
+  }
+
+  .one-light {
+    --color-primary: 64 120 242;
+    --color-primary-light: 105 156 255;
+    --color-primary-dark: 26 90 215;
+
+    --color-secondary: 80 161 79;
+    --color-secondary-light: 123 198 122;
+    --color-secondary-dark: 56 128 56;
+
+    --color-background: 250 250 250;
+    --color-background-alt: 240 240 240;
+
+    --color-surface: 229 229 229;
+    --color-surface-alt: 238 238 238;
+
+    --color-text: 56 58 66;
+    --color-text-muted: 160 161 167;
+
+    --color-border: 216 216 216;
+    --color-border-light: 200 200 200;
+  }
+
+  .everforest {
+    --color-primary: 167 192 128;
+    --color-primary-light: 195 217 160;
+    --color-primary-dark: 130 153 102;
+
+    --color-secondary: 230 126 128;
+    --color-secondary-light: 244 164 166;
+    --color-secondary-dark: 193 95 97;
+
+    --color-background: 47 56 62;
+    --color-background-alt: 55 66 71;
+
+    --color-surface: 60 70 77;
+    --color-surface-alt: 75 86 92;
+
+    --color-text: 211 198 170;
+    --color-text-muted: 150 160 145;
+
+    --color-border: 75 86 92;
+    --color-border-light: 98 110 115;
+  }
+
+  /* Cotton Candy Dreams */
+  .cotton-candy-dreams {
+    --color-primary: 255 92 141;
+    --color-primary-light: 255 125 163;
+    --color-primary-dark: 229 72 121;
+
+    --color-secondary: 193 126 219;
+    --color-secondary-light: 211 154 234;
+    --color-secondary-dark: 159 96 182;
+
+    --color-background: 255 225 237;
+    --color-background-alt: 255 212 227;
+
+    --color-surface: 255 236 243;
+    --color-surface-alt: 255 199 218;
+
+    --color-text: 105 56 92;
+    --color-text-muted: 152 109 139;
+
+    --color-border: 255 171 197;
+    --color-border-light: 255 192 212;
+  }
+
+  .sea-green {
+    --color-primary: 46 139 87;
+    --color-primary-light: 76 175 129;
+    --color-primary-dark: 28 94 58;
+
+    --color-secondary: 32 106 93;
+    --color-secondary-light: 45 154 122;
+    --color-secondary-dark: 20 76 65;
+
+    --color-background: 14 26 22;
+    --color-background-alt: 19 40 32;
+
+    --color-surface: 26 46 40;
+    --color-surface-alt: 34 61 52;
+
+    --color-text: 214 245 227;
+    --color-text-muted: 136 182 163;
+
+    --color-border: 47 79 67;
+    --color-border-light: 58 95 83;
   }
 
   * {
@@ -124,7 +556,7 @@
     transform: translate(-50%, -50%);
     width: 10px;
     height: 10px;
-    background-color: #7fa650;
+    background-color: rgb(var(--color-primary));
     border-radius: 50%;
   }
 
@@ -164,6 +596,7 @@
       transform: translateX(100%);
       opacity: 0;
     }
+
     to {
       transform: translateX(0);
       opacity: 1;
@@ -175,6 +608,7 @@
       transform: translateY(10px) scale(0.95);
       opacity: 0;
     }
+
     to {
       transform: translateY(0) scale(1);
       opacity: 1;
@@ -186,6 +620,7 @@
       transform: translateY(100%);
       opacity: 0;
     }
+
     to {
       transform: translateY(0);
       opacity: 1;
@@ -197,6 +632,7 @@
       transform: translateY(-10px);
       opacity: 0;
     }
+
     to {
       transform: translateY(0);
       opacity: 1;
@@ -207,6 +643,7 @@
     from {
       opacity: 0;
     }
+
     to {
       opacity: 1;
     }
@@ -217,6 +654,7 @@
       transform: translateY(20px) scale(0.95);
       opacity: 0;
     }
+
     to {
       transform: translateY(0) scale(1);
       opacity: 1;
@@ -228,6 +666,7 @@
       transform: translateY(0) scale(1);
       opacity: 1;
     }
+
     to {
       transform: translateY(20px) scale(0.95);
       opacity: 0;

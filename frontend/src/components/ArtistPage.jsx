@@ -96,6 +96,10 @@ export function ArtistPage({ artistId, onBack }) {
         cover: t.album?.cover,
         track_number: t.trackNumber,
         tidal_exists: true,
+        tidal_track_id: t.id,
+        tidal_artist_id: t.artist?.id || artistId,
+        tidal_album_id: t.album?.id,
+        album_artist: t.album?.artist?.name, // From Top Tracks album info
       }));
 
     downloadManager.addToServerQueue(tracks).then(result => {
@@ -127,6 +131,10 @@ export function ArtistPage({ artistId, onBack }) {
           cover: album.cover,
           track_number: t.trackNumber || index + 1,
           tidal_exists: true,
+          tidal_track_id: t.id,
+          tidal_artist_id: t.tidal_artist_id || t.artist?.id,
+          tidal_album_id: t.tidal_album_id || album.id,
+          album_artist: album.artist?.name,
         }));
 
         const res = await downloadManager.addToServerQueue(tracks);
@@ -172,6 +180,10 @@ export function ArtistPage({ artistId, onBack }) {
           cover: album.cover,
           track_number: t.trackNumber || index + 1,
           tidal_exists: true,
+          tidal_track_id: t.id,
+          tidal_artist_id: t.tidal_artist_id || t.artist?.id,
+          tidal_album_id: t.tidal_album_id || album.id,
+          album_artist: album.artist?.name,
         }));
 
         const res = await downloadManager.addToServerQueue(tracks);
@@ -614,11 +626,15 @@ function AlbumTracksModal({ album, onClose }) {
       .map((t, index) => ({
         tidal_id: t.id,
         title: t.title,
-        artist: t.artist?.name || album.artist?.name,
+        artist: t.artist || album.artist?.name,
         album: album.title,
         cover: album.cover,
         track_number: t.trackNumber || index + 1,
         tidal_exists: true,
+        tidal_track_id: t.id,
+        tidal_artist_id: t.tidal_artist_id || album.artist?.id,
+        tidal_album_id: t.tidal_album_id || album.id,
+        album_artist: t.albumArtist || album.artist?.name, // Use backend albumArtist or fallback to album.artist
       }));
 
     downloadManager.addToServerQueue(tracksToDownload).then(res => {

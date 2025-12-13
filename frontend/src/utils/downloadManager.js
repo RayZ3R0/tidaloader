@@ -149,6 +149,7 @@ class DownloadManager {
         title: String(track.title || "Unknown Title"),
         artist: String(track.artist || "Unknown Artist"),
         album: track.album || "",
+        album_artist: track.album_artist || track.albumArtist || null, // Pass Album Artist
         album_id: track.album_id || null,
         track_number: track.track_number || track.trackNumber || null,
         cover: track.cover || null,
@@ -159,6 +160,9 @@ class DownloadManager {
         embed_lyrics: embedLyrics || false,
         organization_template: organizationTemplate || "{Artist}/{Album}/{TrackNumber} - {Title}",
         group_compilations: groupCompilations !== false,
+        ...(track.tidal_track_id && { tidal_track_id: String(track.tidal_track_id) }),
+        ...(track.tidal_artist_id && { tidal_artist_id: String(track.tidal_artist_id) }),
+        ...(track.tidal_album_id && { tidal_album_id: String(track.tidal_album_id) }),
       }));
 
       const result = await api.addToQueue(formattedTracks);

@@ -18,6 +18,10 @@ async def search_tracks(q: str, username: str = Depends(require_auth)):
         
         tracks = extract_items(result, 'tracks')
         log_info(f"Found {len(tracks)} tracks")
+        if tracks:
+            t0 = tracks[0]
+            log_info(f"[Search Debug] First track raw artist: {t0.get('artist')}")
+            log_info(f"[Search Debug] First track raw album: {t0.get('album')}")
         
         return {
             "items": [
@@ -28,7 +32,11 @@ async def search_tracks(q: str, username: str = Depends(require_auth)):
                     album=track.get('album', {}).get('title'),
                     duration=track.get('duration'),
                     cover=track.get('album', {}).get('cover'),
-                    quality=track.get('audioQuality')
+                    quality=track.get('audioQuality'),
+                    trackNumber=track.get('trackNumber'),
+                    albumArtist=track.get('album', {}).get('artist', {}).get('name') if track.get('album', {}).get('artist') else track.get('artist', {}).get('name', 'Unknown'),
+                    tidal_artist_id=track.get('artist', {}).get('id'),
+                    tidal_album_id=track.get('album', {}).get('id')
                 )
                 for track in tracks
             ]
@@ -205,7 +213,11 @@ async def get_album_tracks(album_id: int, username: str = Depends(require_auth))
                     track_number=track.get('track_number'),
                     duration=track.get('duration'),
                     cover=track.get('album', {}).get('cover') if isinstance(track.get('album'), dict) else None,
-                    quality=track.get('audioQuality')
+                    quality=track.get('audioQuality'),
+                    trackNumber=track.get('trackNumber'),
+                    albumArtist=track.get('album', {}).get('artist', {}).get('name') if track.get('album', {}).get('artist') else (track.get('artist', {}).get('name', 'Unknown') if isinstance(track.get('artist'), dict) else 'Unknown'),
+                    tidal_artist_id=track.get('artist', {}).get('id') if isinstance(track.get('artist'), dict) else (track.get('artists', [{}])[0].get('id') if track.get('artists') else None),
+                    tidal_album_id=track.get('album', {}).get('id') if isinstance(track.get('album'), dict) else album_id
                 )
                 for track in tracks
             ]
@@ -365,7 +377,8 @@ async def get_artist(artist_id: int, username: str = Depends(require_auth)):
         
         # Helper to check if something looks like an album
         def is_album_like(obj):
-            return isinstance(obj, dict) and 'id' in obj and 'title' in obj and ('numberOfTracks' in obj or 'cover' in obj)
+            # Relaxed check: just ID and Title are enough.
+            return isinstance(obj, dict) and 'id' in obj and 'title' in obj
         
         # Helper to check if something looks like a track
         def is_track_like(obj):
@@ -385,12 +398,16 @@ async def get_artist(artist_id: int, username: str = Depends(require_auth)):
                             if isinstance(paged_list, dict):
                                 items = paged_list.get('items', [])
                                 for item in items:
+                                    if isinstance(item, list):
+                                        continue
+                                    
                                     album = item.get('item', item) if isinstance(item, dict) else item
+                                    
                                     if is_album_like(album):
                                         albums.append({
                                             'id': album['id'],
                                             'title': album['title'],
-                                            'year': album.get('releaseDate', '').split('-')[0] if album.get('releaseDate') else '',
+                                            'year': album.get('releaseDate', '').split('-')[0] if album.get('releaseDate') else (album.get('year') or ''),
                                             'cover': album.get('cover'),
                                             'numberOfTracks': album.get('numberOfTracks')
                                         })
@@ -427,6 +444,7 @@ async def get_artist(artist_id: int, username: str = Depends(require_auth)):
                     'title': track['title'],
                     'trackNumber': track.get('trackNumber'),
                     'album': {
+                        'id': album_data.get('id'),
                         'title': album_data.get('title'),
                         'cover': album_data.get('cover'),
                     } if album_data else None,
@@ -435,6 +453,24 @@ async def get_artist(artist_id: int, username: str = Depends(require_auth)):
                     'audioQuality': track.get('audioQuality', 'LOSSLESS'),
                 })
         
+        if not albums:
+            log_info("No albums found in artist page, trying direct albums endpoint")
+            direct_albums = tidal_client.get_artist_albums(artist_id)
+            if direct_albums:
+                # Direct endpoint usually returns {'items': [...]}
+                raw_items = direct_albums.get('items', []) if isinstance(direct_albums, dict) else direct_albums
+                for item in raw_items:
+                    album = item.get('item', item) if isinstance(item, dict) else item
+                    if is_album_like(album):
+                        albums.append({
+                            'id': album['id'],
+                            'title': album['title'],
+                            'year': album.get('releaseDate', '').split('-')[0] if album.get('releaseDate') else '',
+                            'cover': album.get('cover'),
+                            'numberOfTracks': album.get('numberOfTracks')
+                        })
+                log_info(f"Found {len(albums)} albums via direct endpoint")
+
         # Sort albums by year (newest first)
         def get_album_timestamp(album):
             year = album.get('year', '')
@@ -490,6 +526,8 @@ async def get_artist(artist_id: int, username: str = Depends(require_auth)):
                 images = artist_info.get('images', [])
                 if images and isinstance(images, list) and len(images) > 0:
                     artist_picture = images[0].get('id') or images[0].get('url')
+        
+        log_info(f"Returning artist details with {len(albums)} albums and {len(top_tracks)} top tracks.")
         
         return {
             "artist": {

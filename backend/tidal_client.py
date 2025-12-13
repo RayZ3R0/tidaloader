@@ -349,6 +349,11 @@ class TidalAPIClient:
     def get_playlist_tracks(self, playlist_id: str) -> Optional[Dict]:
         """Alias for get_playlist to keep naming consistent with album tracks."""
         return self._make_request("/playlist/", {"id": playlist_id}, operation="get_playlist_tracks")
+
+    def get_artist_albums(self, artist_id: int) -> Optional[Dict]:
+        """Fetch albums directly for an artist."""
+        # Try specific endpoint for albums
+        return self._make_request(f"/artist/{artist_id}/albums", operation="get_artist_albums")
     
     def get_download_status(self, track_id: int) -> Optional[Dict]:
         if track_id in self.download_status_cache:

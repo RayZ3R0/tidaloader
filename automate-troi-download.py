@@ -508,7 +508,7 @@ def main():
     DEBUG = not args.no_debug
     TEST_MODE = not args.no_test_mode
     
-    print("🎵 Troi → Tidal Downloader")
+    print("🎵 Troi → Tidaloader")
     print(f"Username: {args.username}")
     print(f"Download directory: {args.download_dir}")
     print(f"Debug mode: {'ON' if DEBUG else 'OFF'}")

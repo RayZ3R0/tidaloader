@@ -13,6 +13,8 @@ class TroiTrack:
     artist: str
     mbid: Optional[str] = None
     tidal_id: Optional[int] = None
+    tidal_artist_id: Optional[int] = None
+    tidal_album_id: Optional[int] = None
     tidal_exists: bool = False
     album: Optional[str] = None
 
