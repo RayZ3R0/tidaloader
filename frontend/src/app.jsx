@@ -52,7 +52,7 @@ export function App() {
 
   return (
     <div class="min-h-screen bg-background">
-      {/* Header with logout button */}
+
       <header class="bg-surface border-b border-border-light px-4 py-3 shadow-sm">
         <div class="max-w-7xl mx-auto flex justify-between items-center">
           <div class="flex items-center gap-3">

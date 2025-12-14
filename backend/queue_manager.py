@@ -17,11 +17,11 @@ from threading import Lock
 from api.utils.logging import log_info, log_error, log_warning, log_step
 
 
-# Configuration from environment
+
 MAX_CONCURRENT_DOWNLOADS = int(os.getenv("MAX_CONCURRENT_DOWNLOADS", "3"))
 QUEUE_AUTO_PROCESS = os.getenv("QUEUE_AUTO_PROCESS", "true").lower() == "true"
 
-# State file path
+
 STATE_FILE = Path(__file__).parent / "queue_state.json"
 
 
@@ -40,17 +40,19 @@ class QueueItem:
     added_at: str = ""
     added_by: str = "unknown"  # Could track which client added it
     
-    # Tidal IDs (for precise metadata)
+
     tidal_track_id: Optional[str] = None
     tidal_artist_id: Optional[str] = None
     tidal_album_id: Optional[str] = None
     tidal_artist_id: Optional[str] = None
     tidal_album_id: Optional[str] = None
     
-    # Context
+
     album_artist: Optional[str] = None # Capture Album Artist context from Frontend
     
-    # Request metadata for download
+    album_artist: Optional[str] = None
+    
+
     target_format: Optional[str] = None
     bitrate_kbps: Optional[int] = None
     run_beets: bool = False
@@ -99,7 +101,7 @@ class QueueManager:
         self._process_task: Optional[asyncio.Task] = None
         self._queue_lock = asyncio.Lock()
         
-        # Load persisted state
+
         self._load_state()
         
         log_info(f"Queue Manager initialized: max_concurrent={MAX_CONCURRENT_DOWNLOADS}, auto_process={QUEUE_AUTO_PROCESS}")
@@ -368,9 +370,7 @@ class QueueManager:
     
     async def _process_item(self, item: QueueItem):
         """Process a single queue item - actual download logic"""
-        # This will be called from the downloads router
-        # The actual download is handled by the existing download_file_async
-        # We just need to import and call it with the right parameters
+
         
         from api.routers.downloads import process_queue_item
         
@@ -381,5 +381,5 @@ class QueueManager:
             self.mark_failed(item.track_id, str(e))
 
 
-# Global singleton instance
+
 queue_manager = QueueManager()

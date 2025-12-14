@@ -5,10 +5,10 @@ from pathlib import Path
 from typing import List, Dict, Optional
 import requests
 
-# Remote URL for endpoint configuration
+
 ENDPOINTS_URL = "https://raw.githubusercontent.com/EduardPrigoana/hifi-instances/refs/heads/main/instances.json"
 
-# Cache settings
+
 CACHE_TTL = 3600  # 1 hour in seconds
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ class TidalAPIClient:
         self.cache_dir.mkdir(exist_ok=True)
         self.cache_file = self.cache_dir / "endpoints_cache.json"
         
-        # In-memory cache
+
         self._endpoints_cache = None
         self._cache_timestamp = None
         
@@ -60,17 +60,17 @@ class TidalAPIClient:
         endpoints = []
         priority = 1
         
-        # Extract from 'api' section only (ignore 'ui' section)
+
         api_section = data.get('api', {})
         
         for provider_name, provider_data in api_section.items():
             urls = provider_data.get('urls', [])
             
             for url in urls:
-                # Remove trailing slash if present
+
                 url = url.rstrip('/')
                 
-                # Extract a name from the URL (e.g., "kraken.squid.wtf" -> "kraken")
+
                 try:
                     hostname = url.replace('https://', '').replace('http://', '')
                     name = hostname.split('.')[0]
@@ -84,7 +84,7 @@ class TidalAPIClient:
                     "provider": provider_name
                 })
             
-            # Increment priority for next provider (lower priority = tried first)
+
             priority += 1
         
         return endpoints
@@ -157,32 +157,29 @@ class TidalAPIClient:
 
     def _load_endpoints(self) -> List[Dict]:
         """Load endpoints with caching strategy."""
-        # 1. Check in-memory cache
+
         if self._is_cache_valid():
             logger.info("Using in-memory cached endpoints")
             return self._endpoints_cache
         
         endpoints = None
         
-        # 2. Try to fetch from remote
+
         endpoints = self._fetch_endpoints_from_remote()
         
-        # 3. Try disk cache if remote failed
+
         if not endpoints:
              endpoints = self._load_cached_endpoints()
         
-        # 4. Use fallback endpoints if everything else failed
+
         if not endpoints:
             endpoints = self._get_fallback_endpoints()
             
         # Ensure mandatory endpoints are present
         if endpoints:
             self._ensure_mandatory_endpoints(endpoints)
-            
-            # Save to disk cache if we fetched from remote (and it's not just fallback)
-            # Actually we should save whatever valid list we have if it's new
-            # But let's stick to saving only if we fetched fresh or if we modified it meaningfully?
-            # For simplicity, if we have endpoints and we are here (cache invalid or missing), save it.
+
+
             self._save_cached_endpoints(endpoints)
             
         self._endpoints_cache = endpoints
@@ -234,15 +231,13 @@ class TidalAPIClient:
                     try:
                         data = response.json()
                         
-                        # Unwrap {'version': ..., 'data': ...} structure if present
-                        # Some endpoints wrap the actual Tidal response in a 'data' field
+
                         if isinstance(data, dict) and 'data' in data and 'version' in data:
                              data = data['data']
                         
                         # specific check for search/track lists being empty
-                        # The API can return items in two formats:
-                        # 1. Nested: {'tracks': {'items': [...]}, 'albums': {...}, ...}
-                        # 2. Direct: {'items': [...], 'limit': ..., 'offset': ...}
+
+
                         if isinstance(data, dict):
                             is_empty = False
                             
@@ -269,7 +264,7 @@ class TidalAPIClient:
                                     playlists_data = data.get('playlists', {})
                                     if isinstance(playlists_data, dict) and not playlists_data.get('items'):
                                         is_empty = True
-                            # For other operations, don't apply the empty check
+
                             
                             if is_empty:
                                 logger.warning(f"[{idx}/{len(sorted_endpoints)}] {endpoint['name']} returned 200 OK but empty content for {operation}. Trying next...")

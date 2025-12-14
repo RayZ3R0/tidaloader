@@ -181,13 +181,12 @@ async def get_album_tracks(album_id: int, username: str = Depends(require_auth))
         if isinstance(result, dict) and 'data' in result and 'version' in result:
             result = result['data']
         
-        # The /album/ endpoint returns items directly (not under 'tracks' key)
-        # Each item is wrapped: {"item": {...track...}, "type": "track"}
+
         raw_items = result.get('items', []) if isinstance(result, dict) else result
         
         tracks = []
         for item in raw_items:
-            # Unwrap if nested in 'item' key
+
             track = item.get('item', item) if isinstance(item, dict) else item
             if isinstance(track, dict) and 'id' in track:
                 track_number = track.get('trackNumber') or track.get('track_number')
@@ -375,12 +374,12 @@ async def get_artist(artist_id: int, username: str = Depends(require_auth)):
         top_tracks = []
         albums = []
         
-        # Helper to check if something looks like an album
+
         def is_album_like(obj):
             # Relaxed check: just ID and Title are enough.
             return isinstance(obj, dict) and 'id' in obj and 'title' in obj
         
-        # Helper to check if something looks like a track
+
         def is_track_like(obj):
             return isinstance(obj, dict) and 'id' in obj and 'title' in obj and 'duration' in obj
         
@@ -480,11 +479,7 @@ async def get_artist(artist_id: int, username: str = Depends(require_auth)):
         
         albums.sort(key=get_album_timestamp, reverse=True)
         
-        # Extract artist info for frontend - the raw data is deeply nested
-        # Artist picture may be in 'picture' or 'images' depending on API response
-        # Helper to find artist object recursively
-        # The API returns a "page" response for get_artist, so the artist details are hidden inside
-        # the albums/tracks lists associated with the artist.
+
         def find_artist_object_recursive(data, target_id):
             if isinstance(data, dict):
                 # Check if this dict is an artist object with matching ID
@@ -507,7 +502,7 @@ async def get_artist(artist_id: int, username: str = Depends(require_auth)):
         artist_picture = None
         artist_name = artist_info.get('name') # Try direct name first
         
-        # Try to find specific artist object if direct info is missing
+
         if not artist_name or not artist_info.get('picture'):
              found_obj = find_artist_object_recursive(artist_info, artist_id)
              if found_obj:

@@ -29,12 +29,10 @@ async def run_beets_import(path: Path):
 
         log_step("4/4", f"Running beets import on {path.name}...")
         
-        # Check for existing config
         use_custom_config = False
         custom_config_path = Path("tidaloader_beets.yaml").resolve()
         
         try:
-            # Check if beets finds a user config
             result = subprocess.run([beet_cmd, "config", "-p"], capture_output=True, text=True)
             config_path = result.stdout.strip()
             
@@ -49,7 +47,6 @@ async def run_beets_import(path: Path):
             use_custom_config = True
             
         if use_custom_config:
-            # Generate custom config
             config_content = """
 directory: /tmp # Dummy, we don't move files
 original_date: no
@@ -81,16 +78,12 @@ musicbrainz:
             missing_tracks: 0.0
             unmatched_tracks: 0.0
 """
-            # Always overwrite the config to ensure latest settings are applied
             with open(custom_config_path, "w") as f:
                 f.write(config_content)
             log_info("Generated/Updated custom Beets configuration.")
 
         log_step("4/4", f"Running beets import on {path.name}...")
         
-        # Run beet import in quiet mode but capture output
-        # Added -vv for verbose logging in case of issues, but we filter what we show
-        # Added -s (singletons) to treat tracks individually, avoiding "missing tracks" penalty
         cmd = [beet_cmd, "-c", str(custom_config_path), "import", "-q", "-s", str(path)]
         
         process = await asyncio.create_subprocess_exec(
@@ -105,7 +98,6 @@ musicbrainz:
         
         if process.returncode == 0:
             log_success("Beets import completed successfully")
-            # Log the output for debugging purposes if needed
             print(f"Beets Output:\n{stdout_str}")
             if stderr_str:
                 print(f"Beets Errors/Warnings:\n{stderr_str}")

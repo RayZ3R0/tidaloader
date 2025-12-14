@@ -43,7 +43,7 @@ async def embed_lyrics_with_ffmpeg(filepath: Path, metadata: dict):
     try:
         import subprocess
         
-        # Check if ffmpeg is installed
+
         try:
             subprocess.run(["ffmpeg", "-version"], check=True, capture_output=True)
         except (FileNotFoundError, subprocess.CalledProcessError):
@@ -57,15 +57,14 @@ async def embed_lyrics_with_ffmpeg(filepath: Path, metadata: dict):
 
         log_step("3.8/4", f"Embedding lyrics with FFmpeg...")
         
-        # Create a temporary lyrics file
+
         lyrics_path = filepath.with_suffix('.lyrics.txt')
         with open(lyrics_path, 'w', encoding='utf-8') as f:
             f.write(lyrics)
             
         output_path = filepath.with_suffix('.temp' + filepath.suffix)
         
-        # Construct FFmpeg command
-        # ffmpeg -i input -map 0 -c copy -metadata LYRICS="..." output
+
         cmd = [
             "ffmpeg", "-y", "-i", str(filepath),
             "-map", "0", "-c", "copy",
@@ -73,8 +72,7 @@ async def embed_lyrics_with_ffmpeg(filepath: Path, metadata: dict):
             str(output_path)
         ]
         
-        # If we have synced lyrics, we might want to try adding them as specific tags too if needed
-        # But the user request specifically mentioned -metadata LYRICS="..."
+
         
         process = await asyncio.create_subprocess_exec(
             *cmd,
@@ -84,7 +82,7 @@ async def embed_lyrics_with_ffmpeg(filepath: Path, metadata: dict):
         stdout, stderr = await process.communicate()
         
         if process.returncode == 0:
-            # Replace original file with new file
+
             shutil.move(str(output_path), str(filepath))
             log_success("Lyrics embedded with FFmpeg")
         else:
@@ -92,7 +90,7 @@ async def embed_lyrics_with_ffmpeg(filepath: Path, metadata: dict):
             if output_path.exists():
                 output_path.unlink()
                 
-        # Cleanup temp lyrics file
+
         if lyrics_path.exists():
             lyrics_path.unlink()
             

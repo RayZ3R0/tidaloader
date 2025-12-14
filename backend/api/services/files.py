@@ -30,25 +30,18 @@ async def organize_file_by_metadata(temp_filepath: Path, metadata: dict, templat
             file_ext = temp_filepath.suffix or '.flac'
         file_ext = file_ext if file_ext.startswith('.') else f".{file_ext}"
         
-        # Sanitize components
         s_artist = sanitize_path_component(artist)
         s_album = sanitize_path_component(album)
         s_title = sanitize_path_component(title)
         
-        # Handle compilations
         is_compilation = artist.lower() in ['various artists', 'various'] or metadata.get('compilation')
         
-        # Prepare template variables
         track_str = str(track_number).zfill(2) if track_number else "00"
         
-        # Determine Artist and Album values for template
         template_artist = s_artist
         template_album = s_album
         
         if group_compilations and is_compilation:
-            # User requested grouping for compilations
-            # We set the Artist part to "Compilations" to group them in a folder
-            # And we prefix the Album with "VA - " to make it clear and self-contained
             template_artist = "Compilations"
             if not template_album.startswith("VA - "):
                 template_album = f"VA - {template_album}"
@@ -63,16 +56,13 @@ async def organize_file_by_metadata(temp_filepath: Path, metadata: dict, templat
             "Year": str(metadata.get('date', '')).split('-')[0] if metadata.get('date') else "Unknown Year"
         }
         
-        # Format path using template
         try:
-            # Remove leading slash to avoid absolute paths
             clean_template = template.lstrip('/')
             relative_path_str = clean_template.format(**template_vars)
         except KeyError as e:
             log_warning(f"Invalid template key: {e}. Falling back to default.")
             relative_path_str = f"{s_artist}/{s_album}/{track_str} - {s_title}"
             
-        # Append extension
         if not relative_path_str.endswith(file_ext):
             relative_path_str += file_ext
             

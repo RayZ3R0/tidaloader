@@ -3,31 +3,29 @@ name: Build and Push Docker Images
 on:
   push:
     branches: [main, master]
-    tags:
-      - "v*"
+    tags: ["v*"]
+    paths-ignore: 
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
   pull_request:
     branches: [main, master]
+    paths-ignore: 
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
   workflow_dispatch:
 
 env:
   REGISTRY_DOCKERHUB: docker.io
   REGISTRY_GHCR: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME: ${{ github.repository }} 
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'push' && (
-        contains(github.event.head_commit.message, 'feat:') ||
-        contains(github.event.head_commit.message, 'fix:') ||
-        contains(github.event.head_commit.message, 'chore:') ||
-        contains(github.event.head_commit.message, 'build:') ||
-        contains(github.event.head_commit.message, 'refactor:') ||
-        contains(github.event.head_commit.message, 'perf:') ||
-        contains(github.event.head_commit.message, 'ci:')
-      ))
     permissions:
       contents: read
       packages: write
@@ -78,6 +76,7 @@ jobs:
         with:
           context: .
           platforms: linux/amd64,linux/arm64
+          # Pushes to registry ONLY if it is not a PR
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

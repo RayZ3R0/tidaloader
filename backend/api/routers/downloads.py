@@ -154,7 +154,7 @@ async def download_track_server_side(
     username: str = Depends(require_auth)
 ):
     try:
-        # Check if download is already in progress
+
         if request.track_id in active_downloads:
             current_status = active_downloads[request.track_id].get('status')
             if current_status in ['starting', 'downloading', 'transcoding']:
@@ -165,12 +165,12 @@ async def download_track_server_side(
                     "message": "Download already in progress"
                 }
         
-        # Check download state manager
+
         saved_state = download_state_manager.get_download_state(request.track_id)
         if saved_state:
             if saved_state['status'] == 'downloading':
                 log_warning(f"Download in state manager for track {request.track_id}")
-                # Re-register in active_downloads
+
                 active_downloads[request.track_id] = {
                     'progress': saved_state.get('progress', 0),
                     'status': 'downloading'
@@ -181,7 +181,7 @@ async def download_track_server_side(
                     "message": "Download already in progress"
                 }
             elif saved_state['status'] == 'completed':
-                # Check if the file still exists at the stored path
+
                 saved_path = saved_state.get('metadata', {}).get('final_path')
                 saved_filename = saved_state.get('metadata', {}).get('title', '')
                 file_still_exists = False
@@ -189,7 +189,7 @@ async def download_track_server_side(
                 if saved_path:
                     file_still_exists = Path(saved_path).exists()
                 elif saved_state.get('filename'):
-                    # Fallback: check if filename exists anywhere in DOWNLOAD_DIR (quick check)
+
                     for ext in ['.m4a', '.flac', '.mp3', '.opus']:
                         potential_path = DOWNLOAD_DIR / f"{saved_state.get('filename')}"
                         if potential_path.exists():
@@ -221,7 +221,7 @@ async def download_track_server_side(
         
         requested_quality = request.quality.upper() if request.quality else "LOSSLESS"
         
-        # Mark as starting immediately
+
         active_downloads[request.track_id] = {
             'progress': 0,
             'status': 'starting'
@@ -278,7 +278,7 @@ async def download_track_server_side(
                 metadata['total_tracks'] = album_data.get('numberOfTracks')
                 metadata['total_discs'] = album_data.get('numberOfVolumes')
                 
-                # Add Tidal IDs for precise matching
+
                 metadata['tidal_track_id'] = str(track_data.get('id', ''))
                 metadata['tidal_artist_id'] = str(artist_data.get('id', ''))
                 metadata['tidal_album_id'] = str(album_data.get('id', ''))
@@ -288,18 +288,18 @@ async def download_track_server_side(
                     cover_id_str = str(cover_id).replace('-', '/')
                     metadata['cover_url'] = f"https://resources.tidal.com/images/{cover_id_str}/640x640.jpg"
                 
-                # Check for compilation flag
+
                 album_artist = metadata.get('album_artist') or ''
                 if album_data.get('type') == 'COMPILATION' or (album_artist and album_artist.lower() in ['various artists', 'various']):
                     metadata['compilation'] = True
             else:
-                # Use album info from request if API didn't provide it
+
                 metadata['album'] = request.album
                 if request.cover:
                     cover_id_str = str(request.cover).replace('-', '/')
                     metadata['cover_url'] = f"https://resources.tidal.com/images/{cover_id_str}/640x640.jpg"
         else:
-            # Fallback to request data
+
             metadata['title'] = request.title
             metadata['artist'] = request.artist
             metadata['album'] = request.album
@@ -597,8 +597,7 @@ async def process_queue_item(item: QueueItem):
         else:
             track_data = track_info 
 
-        # Build metadata - use queue item data (passed from frontend)
-        # Frontend components now correctly pass cover and track_number
+
         metadata = {
             'quality': requested_quality,
             'source_quality': source_quality,
@@ -624,12 +623,7 @@ async def process_queue_item(item: QueueItem):
             cover_id_str = str(item.cover).replace('-', '/')
             metadata['cover_url'] = f"https://resources.tidal.com/images/{cover_id_str}/640x640.jpg"
             
-        # DEBUG LOGGING
-        log_info(f"[Queue] Extracted IDs for {item.title}:")
-        log_info(f"  Track ID: {metadata.get('tidal_track_id')}")
-        log_info(f"  Artist ID: {metadata.get('tidal_artist_id')}")
-        log_info(f"  Album ID: {metadata.get('tidal_album_id')}")
-        # DEBUG LOGGING
+
         log_info(f"[Queue] Extracted IDs for {item.title}:")
         log_info(f"  Track ID: {metadata.get('tidal_track_id')}")
         log_info(f"  Artist ID: {metadata.get('tidal_artist_id')}")
@@ -684,7 +678,7 @@ async def process_queue_item(item: QueueItem):
         queue_manager.update_active_progress(track_id, 0, 'downloading')
         active_downloads[track_id] = {'progress': 0, 'status': 'downloading'}
         
-        # Call the existing download function
+
         await download_file_async(
             track_id,
             stream_url,
