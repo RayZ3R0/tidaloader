@@ -1,5 +1,18 @@
 export const releaseNotes = [
     {
+        version: "1.2.0",
+        date: "2025-12-19",
+        title: "Monitored Playlists & API Cleanup",
+        changes: [
+            "New Feature: Monitored Playlists! Subscribe to Tidal playlists and automatically keep them in sync.",
+            "Added support for Daily, Weekly, and Monthly auto-sync frequencies for monitored playlists.",
+            "Playlists now generate standard .m3u8 files for easy playback in your favorite media player.",
+            "Refined Tidal API client: Removed legacy fallback systems for a more robust and secure connection.",
+            "Improved backend stability with enhanced error handling and cleanup.",
+            "Added dedicated 'Tidal Playlists' tab for managing your monitored collections."
+        ]
+    },
+    {
         version: "1.1.0",
         date: "2025-12-14",
         title: "Extended ListenBrainz Integration",
