@@ -1,12 +1,22 @@
 export const releaseNotes = [
     {
+        version: "1.2.1",
+        date: "2025-12-19",
+        title: "Playlist File Management",
+        changes: [
+            "Added ability to delete downloaded playlist files directly from the UI.",
+            "Added comprehensive safety checks and confirmation dialogs to prevent accidental deletion.",
+            "Minor UI improvements for playlist management."
+        ]
+    },
+    {
         version: "1.2.0",
         date: "2025-12-19",
         title: "Monitored Playlists & API Cleanup",
         changes: [
             "New Feature: Monitored Playlists! Subscribe to Tidal playlists and automatically keep them in sync.",
             "Added support for Daily, Weekly, and Monthly auto-sync frequencies for monitored playlists.",
-            "Playlists now generate standard .m3u8 files for easy playback in your favorite media player.",
+            "Playlists now generate standard .m3u8 files for Navidrome/Jellyfin.",
             "Refined Tidal API client: Removed legacy fallback systems for a more robust and secure connection.",
             "Improved backend stability with enhanced error handling and cleanup.",
             "Added dedicated 'Tidal Playlists' tab for managing your monitored collections."
