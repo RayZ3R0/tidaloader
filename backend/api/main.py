@@ -18,7 +18,7 @@ logging.basicConfig(
 # Fix path to include backend root
 sys.path.append(str(Path(__file__).parent.parent))
 
-from api.routers import system, listenbrainz, search, downloads, library, playlists
+from api.routers import system, listenbrainz, search, downloads, library, playlists, spotify
 from api.clients import tidal_client
 from api.utils.logging import log_warning, log_info
 from download_state import download_state_manager
@@ -66,6 +66,7 @@ app.include_router(search.router)
 app.include_router(downloads.router)
 app.include_router(library.router)
 app.include_router(playlists.router)
+app.include_router(spotify.router)
 
 # Frontend Serving
 frontend_dist = Path(__file__).parent.parent.parent / "frontend" / "dist"

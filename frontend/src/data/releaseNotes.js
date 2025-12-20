@@ -1,10 +1,22 @@
 export const releaseNotes = [
     {
+        version: "1.2.3",
+        date: "2025-12-20",
+        title: "Spotify Playlist Integration",
+        changes: [
+            "Introduced native support for Spotify playlist URLs, enabling direct import without API credentials.",
+            "Implemented guest token extraction to bypass the 100-track limit for public playlists.",
+            "Added a dedicated Spotify Playlists tab for streamlined access and downloads.",
+            "Enhanced track matching algorithm with Romaji fallback for improved accuracy on Japanese titles."
+        ]
+    },
+    {
         version: "1.2.2",
         date: "2025-12-20",
-        title: "Playlist URL Support",
+        title: "Direct Playlist URL Support",
         changes: [
-            "You can now paste Tidal playlist URLs directly into the search bar."
+            "Implemented direct navigation support for Tidal playlist URLs and UUIDs in the search bar.",
+            "Resolved discovery issues for user-created playlists not indexed in public search."
         ]
     },
     {

@@ -20,6 +20,9 @@ class ListenBrainzGenerateRequest(BaseModel):
     playlist_type: str = "periodic-jams"
     should_validate: bool = True
 
+class SpotifyGenerateRequest(BaseModel):
+    playlist_url: str
+
 class ValidateTrackRequest(BaseModel):
     track: PlaylistTrack
 
