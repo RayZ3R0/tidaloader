@@ -3,6 +3,28 @@ import { useState, useEffect } from "preact/hooks";
 import { api } from "../../api/client";
 import { useToastStore } from "../../stores/toastStore";
 
+// Extract playlist UUID from a Tidal URL or raw UUID
+function extractPlaylistUuid(input) {
+    if (!input) return null;
+    const trimmed = input.trim();
+
+    // UUID pattern (8-4-4-4-12 format)
+    const uuidPattern = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
+
+    // Check if it's already a raw UUID
+    if (uuidPattern.test(trimmed)) {
+        return trimmed;
+    }
+
+    // Extract UUID from Tidal playlist URLs
+    const urlMatch = trimmed.match(/tidal\.com\/(?:browse\/)?playlist\/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/i);
+    if (urlMatch) {
+        return urlMatch[1];
+    }
+
+    return null;
+}
+
 export function PlaylistSearch({ onSyncStarted }) {
     const [query, setQuery] = useState("");
     const [loading, setLoading] = useState(false);
@@ -13,6 +35,37 @@ export function PlaylistSearch({ onSyncStarted }) {
 
     const handleSearch = async () => {
         if (!query.trim()) return;
+
+        // Check if query is a URL or UUID
+        const extractedUuid = extractPlaylistUuid(query);
+        if (extractedUuid) {
+            // Fetch playlist directly and show it as a result
+            setLoading(true);
+            setResults([]);
+            try {
+                const res = await api.getPlaylist(extractedUuid);
+                if (res && res.playlist) {
+                    const playlist = {
+                        id: extractedUuid,
+                        uuid: extractedUuid,
+                        title: res.playlist.title || res.playlist.name || "Playlist",
+                        numberOfTracks: res.items?.length || res.playlist.numberOfTracks,
+                        cover: res.playlist.cover,
+                        creator: res.playlist.creator,
+                    };
+                    setResults([playlist]);
+                    addToast(`Found playlist: ${playlist.title}`, "success");
+                } else {
+                    addToast("Playlist not found", "error");
+                }
+            } catch (e) {
+                addToast(`Failed to load playlist: ${e.message}`, "error");
+            } finally {
+                setLoading(false);
+            }
+            return;
+        }
+
         setLoading(true);
         setResults([]);
         try {
@@ -59,7 +112,7 @@ export function PlaylistSearch({ onSyncStarted }) {
                         value={query}
                         onInput={(e) => setQuery(e.target.value)}
                         onKeyPress={(e) => e.key === "Enter" && handleSearch()}
-                        placeholder="Search for a playlist to sync..."
+                        placeholder="Search or paste a Tidal playlist URL..."
                         disabled={loading}
                         class="input-field flex-1"
                     />

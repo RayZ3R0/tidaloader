@@ -1,5 +1,13 @@
 export const releaseNotes = [
     {
+        version: "1.2.2",
+        date: "2025-12-20",
+        title: "Playlist URL Support",
+        changes: [
+            "You can now paste Tidal playlist URLs directly into the search bar."
+        ]
+    },
+    {
         version: "1.2.1",
         date: "2025-12-19",
         title: "Playlist File Management",

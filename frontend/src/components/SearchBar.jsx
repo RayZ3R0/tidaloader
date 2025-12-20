@@ -7,6 +7,30 @@ import { ArtistPage } from "./ArtistPage";
 import { AlbumPage } from "./AlbumPage";
 import { PlaylistPage } from "./PlaylistPage";
 
+// Extract playlist UUID from a Tidal URL or raw UUID
+function extractPlaylistUuid(input) {
+  if (!input) return null;
+  const trimmed = input.trim();
+
+  // UUID pattern (8-4-4-4-12 format)
+  const uuidPattern = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
+
+  // Check if it's already a raw UUID
+  if (uuidPattern.test(trimmed)) {
+    return trimmed;
+  }
+
+  // Extract UUID from Tidal playlist URLs like:
+  // https://tidal.com/playlist/45771c84-041e-454f-94ee-12b4d6a1374e
+  // https://listen.tidal.com/playlist/45771c84-041e-454f-94ee-12b4d6a1374e
+  const urlMatch = trimmed.match(/tidal\.com\/(?:browse\/)?playlist\/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/i);
+  if (urlMatch) {
+    return urlMatch[1];
+  }
+
+  return null;
+}
+
 export function SearchBar() {
   const [query, setQuery] = useState("");
   const [searchType, setSearchType] = useState("track");
@@ -14,6 +38,7 @@ export function SearchBar() {
   const [results, setResults] = useState([]);
   const [selected, setSelected] = useState(new Set());
   const [error, setError] = useState(null);
+  const [directPlaylistId, setDirectPlaylistId] = useState(null);
 
   const addToast = useToastStore((state) => state.addToast);
 
@@ -37,6 +62,18 @@ export function SearchBar() {
     if (!query.trim()) {
       setError("Please enter a search query");
       return;
+    }
+
+    // For playlists: check if query is a URL or UUID and navigate directly
+    if (activeType === "playlist") {
+      const extractedUuid = extractPlaylistUuid(query);
+      if (extractedUuid) {
+        setDirectPlaylistId(extractedUuid);
+        setResults([]);
+        setError(null);
+        addToast("Loading playlist from URL...", "info");
+        return;
+      }
     }
 
     setLoading(true);
@@ -117,6 +154,19 @@ export function SearchBar() {
     });
     setSelected(new Set());
   };
+
+  // If a playlist URL/UUID was provided, render the PlaylistPage directly
+  if (directPlaylistId) {
+    return (
+      <PlaylistPage
+        playlistId={directPlaylistId}
+        onBack={() => {
+          setDirectPlaylistId(null);
+          setQuery("");
+        }}
+      />
+    );
+  }
 
   return (
     <div class="space-y-6">
