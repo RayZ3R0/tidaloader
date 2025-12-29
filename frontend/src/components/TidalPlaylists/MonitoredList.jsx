@@ -15,7 +15,9 @@ export function MonitoredList() {
     const fetchPlaylists = async () => {
         try {
             const res = await api.getMonitoredPlaylists();
-            setPlaylists(res);
+            // Filter: Only show Tidal playlists (source == 'tidal' or undefined/null)
+            const tidalPlaylists = res.filter(p => !p.source || p.source === 'tidal');
+            setPlaylists(tidalPlaylists);
         } catch (e) {
             addToast(`Failed to load playlists: ${e.message}`, "error");
         } finally {
