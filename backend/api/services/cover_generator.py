@@ -34,30 +34,71 @@ class CoverArtGenerator:
                 # Title: Large, Multiline if needed, Top/Center
                 # User: Large, Distinct color/weight, Bottom/Center
 
-                # Font Sizes (Scale relative to width=640 usually)
-                title_size = int(width / 7)    # Slightly smaller to fit words
-                subtitle_size = int(width / 9) # MUCH larger than before (was /15)
+                # --- LOGIC UPDATE: One Word Per Line ---
+                # User requested "Weekly Exploration" -> "Weekly", "Exploration" each on their own line.
+                # Also prevent overflow if a word is extremely long.
 
-                font_path = self.assets_dir / "font.ttf"
-                if font_path.exists():
-                    font = ImageFont.truetype(str(font_path), title_size)
-                    sub_font = ImageFont.truetype(str(font_path), subtitle_size)
-                else:
-                    # Try linux paths
-                    try:
-                        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", title_size)
-                        sub_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", subtitle_size) # Bold for user too
-                    except:
-                        font = ImageFont.load_default()
-                        sub_font = ImageFont.load_default()
-
-                # --- Draw Title (Multiline) ---
                 import textwrap
-                # Wrap text to ~10-12 chars per line roughly? Or measure it?
-                # Pillow doesn't auto-wrap. Let's wrap fairly aggressively for "Weekly Exploration" -> 2 lines
-                lines = textwrap.wrap(title, width=10) 
                 
-                # Calculate total height of title block
+                # Split by words to force one word per line (User request 1)
+                words = title.split()
+                if not words:
+                    words = [title]
+                lines = words
+
+                # --- Dynamic Font Sizing (Prevent Overflow) ---
+                # Start with a large font, shrink if any word is wider than image width
+                max_width = width * 0.90 # Leave 5% margin on each side
+                
+                def get_max_word_width(font_obj, words_list):
+                    max_w = 0
+                    for w in words_list:
+                        bbox = draw.textbbox((0, 0), w, font=font_obj)
+                        max_w = max(max_w, bbox[2] - bbox[0])
+                    return max_w
+
+                # Start slightly larger than before since we have more vertical space
+                current_title_size = int(width / 6) 
+                
+                font_path = self.assets_dir / "font.ttf"
+                
+                # Iteratively shrink font until it fits
+                while current_title_size > 10:
+                    try:
+                        if font_path.exists():
+                             font = ImageFont.truetype(str(font_path), current_title_size)
+                        else:
+                             # Try system fonts
+                             try:
+                                 font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", current_title_size)
+                             except:
+                                 # Fallback to default (ugly, non-scalable usually, but prevents crash)
+                                 # Warning: load_default doesn't support size. 
+                                 # If we hit this, dynamic sizing fails.
+                                 font = ImageFont.load_default()
+                                 break 
+                        
+                        max_w = get_max_word_width(font, lines)
+                        if max_w <= max_width:
+                            break # Fits!
+                        
+                        current_title_size -= 2 # Shrink
+                    except Exception as e:
+                        logger.warning(f"Font sizing error: {e}")
+                        break
+
+                # Subtitle (User) Sizing - Make it Prominent
+                # Sync subtitle size relative to final title size but slightly smaller
+                subtitle_size = int(current_title_size * 0.8)
+                try:
+                     if font_path.exists():
+                         sub_font = ImageFont.truetype(str(font_path), subtitle_size)
+                     else:
+                         sub_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", subtitle_size)
+                except:
+                     sub_font = ImageFont.load_default()
+
+                # --- Calculate Layout ---
                 line_heights = []
                 line_spacing = 10
                 for line in lines:
@@ -75,15 +116,13 @@ class CoverArtGenerator:
                     sub_h = sbbox[3] - sbbox[1]
 
                 # --- Positioning ---
-                # Layout:
                 # [ Spacer ]
                 # [ Title Block ]
-                # [ Spacer ]
+                # [ Spacer (Gap) ]
                 # [ User Block ]
                 # [ Spacer ]
                 
-                # Total content height
-                content_gap = 50 # Gap between title and user
+                content_gap = 40 
                 total_content_h = total_title_h + content_gap + sub_h
                 
                 start_y = (height - total_content_h) / 2
@@ -104,15 +143,13 @@ class CoverArtGenerator:
                 
                 # Draw User
                 if subtitle:
-                    user_y = current_y + content_gap - line_spacing # Adjust for last spacing
+                    user_y = current_y + content_gap - line_spacing 
                     sx = (width - sub_w) / 2
                     
-                    # User: Yellow/Gold or just distinct White? 
-                    # Let's keep white but maybe a different opacity or just BRIGHT
                     # Shadow
                     draw.text((sx+3, user_y+3), subtitle, font=sub_font, fill=(0,0,0))
-                    # Text
-                    draw.text((sx, user_y), subtitle, font=sub_font, fill=(255, 220, 100)) # Slight Gold tint for User
+                    # Text - Gold/Yellow
+                    draw.text((sx, user_y), subtitle, font=sub_font, fill=(255, 220, 100))
 
                 # Save to bytes
                 from io import BytesIO
