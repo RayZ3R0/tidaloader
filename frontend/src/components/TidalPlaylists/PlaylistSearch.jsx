@@ -8,15 +8,15 @@ function extractPlaylistUuid(input) {
     if (!input) return null;
     const trimmed = input.trim();
 
-    
+
     const uuidPattern = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 
-    
+
     if (uuidPattern.test(trimmed)) {
         return trimmed;
     }
 
-    
+
     const urlMatch = trimmed.match(/tidal\.com\/(?:browse\/)?playlist\/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/i);
     if (urlMatch) {
         return urlMatch[1];
@@ -30,16 +30,16 @@ export function PlaylistSearch({ onSyncStarted }) {
     const [loading, setLoading] = useState(false);
     const [results, setResults] = useState([]);
     const [officialOnly, setOfficialOnly] = useState(false);
-    const [selectedPlaylist, setSelectedPlaylist] = useState(null); 
+    const [selectedPlaylist, setSelectedPlaylist] = useState(null);
     const addToast = useToastStore((state) => state.addToast);
 
     const handleSearch = async () => {
         if (!query.trim()) return;
 
-        
+
         const extractedUuid = extractPlaylistUuid(query);
         if (extractedUuid) {
-            
+
             setLoading(true);
             setResults([]);
             try {
@@ -85,7 +85,7 @@ export function PlaylistSearch({ onSyncStarted }) {
     const [monitoredUuids, setMonitoredUuids] = useState(new Set());
 
     useEffect(() => {
-        
+
         api.getMonitoredPlaylists().then(list => {
             setMonitoredUuids(new Set(list.map(p => p.uuid)));
         }).catch(err => console.error("Failed to load monitored status", err));
@@ -330,6 +330,7 @@ function PlaylistCoverImage({ cover, title }) {
 function MonitorModal({ playlist, onClose, onSuccess }) {
     const [frequency, setFrequency] = useState("manual");
     const [quality, setQuality] = useState("LOSSLESS");
+    const [usePlaylistFolder, setUsePlaylistFolder] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const addToast = useToastStore((state) => state.addToast);
 
@@ -338,7 +339,8 @@ function MonitorModal({ playlist, onClose, onSuccess }) {
         setSubmitting(true);
         try {
             const uuid = playlist.uuid || playlist.id;
-            await api.monitorPlaylist(uuid, playlist.title, frequency, quality);
+            // monitorPlaylist(uuid, name, frequency, quality, source, extra_config, use_playlist_folder)
+            await api.monitorPlaylist(uuid, playlist.title, frequency, quality, "tidal", null, usePlaylistFolder);
             addToast(`Started monitoring "${playlist.title}"`, "success");
             onSuccess();
         } catch (e) {
@@ -389,6 +391,22 @@ function MonitorModal({ playlist, onClose, onSuccess }) {
                             <option value="LOSSLESS">Lossless (FLAC 16bit)</option>
                             <option value="HI_RES">Hi-Res (FLAC 24bit)</option>
                         </select>
+                    </div>
+
+                    <div>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={usePlaylistFolder}
+                                onChange={(e) => setUsePlaylistFolder(e.target.checked)}
+                                class="rounded border-border text-primary focus:ring-primary h-4 w-4"
+                            />
+                            <span class="text-sm font-medium text-text">Download tracks to playlist folder</span>
+                        </label>
+                        <p class="text-xs text-text-muted mt-1 ml-6">
+                            Creates a standalone folder "{playlist.title}" containing all tracks.
+                            Useful for keeping files together, but duplicates tracks if they already exist in library.
+                        </p>
                     </div>
 
                     <div class="flex gap-3 justify-end mt-6">

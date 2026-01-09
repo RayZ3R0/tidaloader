@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     use_musicbrainz: bool = True
     run_beets: bool = False
     embed_lyrics: bool = False
+    group_compilations: bool = True
     
     # Jellyfin Integration
     jellyfin_url: Optional[str] = None

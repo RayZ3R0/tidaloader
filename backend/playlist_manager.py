@@ -34,6 +34,7 @@ class MonitoredPlaylist:
     track_count: int = 0
     source: str = "tidal" # "tidal" or "listenbrainz"
     extra_config: Dict[str, Any] = None # e.g. { "lb_username": "...", "lb_type": "..." }
+    use_playlist_folder: bool = False
 
 class PlaylistManager:
     _instance = None
@@ -76,8 +77,8 @@ class PlaylistManager:
     def get_playlist(self, uuid: str) -> Optional[MonitoredPlaylist]:
         return next((p for p in self._playlists if p.uuid == uuid), None)
 
-    def add_monitored_playlist(self, uuid: str, name: str, frequency: str = "manual", quality: str = "LOSSLESS", source: str = "tidal", extra_config: Dict = None) -> tuple[MonitoredPlaylist, bool]:
-        logger.info(f"Adding/Updating playlist: {uuid} - {name} (Freq: {frequency}, Qual: {quality}, Source: {source})")
+    def add_monitored_playlist(self, uuid: str, name: str, frequency: str = "manual", quality: str = "LOSSLESS", source: str = "tidal", extra_config: Dict = None, use_playlist_folder: bool = False) -> tuple[MonitoredPlaylist, bool]:
+        logger.info(f"Adding/Updating playlist: {uuid} - {name} (Freq: {frequency}, Qual: {quality}, Source: {source}, Folder: {use_playlist_folder})")
         # Check if exists
         existing = self.get_playlist(uuid)
         if existing:
@@ -86,6 +87,7 @@ class PlaylistManager:
             existing.quality = quality
             existing.source = source
             existing.extra_config = extra_config
+            existing.use_playlist_folder = use_playlist_folder
             # Start sync immediately? No, caller decides.
             self._save_state()
             logger.info(f"Playlist {uuid} updated. Current list size: {len(self._playlists)}")
@@ -103,7 +105,8 @@ class PlaylistManager:
             sync_frequency=frequency,
             quality=quality,
             source=source,
-            extra_config=extra_config
+            extra_config=extra_config,
+            use_playlist_folder=use_playlist_folder
         )
         self._playlists.append(playlist)
         self._save_state()
@@ -249,6 +252,16 @@ class PlaylistManager:
         m3u8_lines = ["#EXTM3U", f"# Source: {playlist.source}"]
         items_to_download = []
         
+        org_template = settings.organization_template
+        group_compilations = settings.group_compilations
+        
+        if playlist.use_playlist_folder:
+            safe_pl_name = sanitize_path_component(playlist.name)
+            # Use 'tidaloader_playlists' explicitly to match PLAYLISTS_DIR logic
+            # This makes the path relative to DOWNLOAD_DIR be: tidaloader_playlists/PlaylistName/Track - Title
+            org_template = f"tidaloader_playlists/{safe_pl_name}/{{TrackNumber}} - {{Title}}"
+            group_compilations = False
+        
         for i, item in enumerate(raw_items):
             # Robust extraction logic mirrored from search.py
             track = item.get('item', item) if isinstance(item, dict) else item
@@ -293,7 +306,7 @@ class PlaylistManager:
             
             # Check FLAC (Common default for lossless)
             metadata['file_ext'] = '.flac'
-            rel_flac = get_output_relative_path(metadata)
+            rel_flac = get_output_relative_path(metadata, template=org_template, group_compilations=group_compilations)
             if (DOWNLOAD_DIR / rel_flac).exists():
                 logger.info(f"Found existing file (FLAC): {rel_flac}")
                 found_rel_path = rel_flac
@@ -301,21 +314,21 @@ class PlaylistManager:
                 # logger.debug(f"File not found at: {DOWNLOAD_DIR / rel_flac}")
                 # Check M4A
                 metadata['file_ext'] = '.m4a'
-                rel_m4a = get_output_relative_path(metadata)
+                rel_m4a = get_output_relative_path(metadata, template=org_template, group_compilations=group_compilations)
                 if (DOWNLOAD_DIR / rel_m4a).exists():
                     logger.info(f"Found existing file (M4A): {rel_m4a}")
                     found_rel_path = rel_m4a
                 else:
                     # Check MP3
                     metadata['file_ext'] = '.mp3'
-                    rel_mp3 = get_output_relative_path(metadata)
+                    rel_mp3 = get_output_relative_path(metadata, template=org_template, group_compilations=group_compilations)
                     if (DOWNLOAD_DIR / rel_mp3).exists():
                         logger.info(f"Found existing file (MP3): {rel_mp3}")
                         found_rel_path = rel_mp3
                     # Check OPUS
                     else:
                         metadata['file_ext'] = '.opus'
-                        rel_opus = get_output_relative_path(metadata)
+                        rel_opus = get_output_relative_path(metadata, template=org_template, group_compilations=group_compilations)
                         if (DOWNLOAD_DIR / rel_opus).exists():
                             logger.info(f"Found existing file (OPUS): {rel_opus}")
                             found_rel_path = rel_opus
@@ -346,8 +359,8 @@ class PlaylistManager:
                         tidal_artist_id=str(artist_data.get('id')) if artist_data.get('id') else None,
                         tidal_album_id=str(album_data.get('id')) if album_data.get('id') else None,
                         auto_clean=True,
-                        organization_template=settings.organization_template,
-                        group_compilations=settings.group_compilations,
+                        organization_template=org_template,
+                        group_compilations=group_compilations,
                         run_beets=settings.run_beets,
                         embed_lyrics=settings.embed_lyrics
                     ))
@@ -357,7 +370,7 @@ class PlaylistManager:
                         target_ext = '.m4a'
                     
                     metadata['file_ext'] = target_ext
-                    predicted_path = get_output_relative_path(metadata)
+                    predicted_path = get_output_relative_path(metadata, template=org_template, group_compilations=group_compilations)
                     
                     duration = track.get('duration', -1)
                     m3u8_lines.append(f"#EXTINF:{duration},{artist_name} - {title}")

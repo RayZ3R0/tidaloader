@@ -386,8 +386,8 @@ class ApiClient {
         return this.get("/playlists/monitored");
     }
 
-    monitorPlaylist(uuid, name, frequency, quality, source = "tidal", extra_config = null) {
-        return this.post("/playlists/monitor", { uuid, name, frequency, quality, source, extra_config });
+    monitorPlaylist(uuid, name, frequency, quality, source = "tidal", extra_config = null, use_playlist_folder = false) {
+        return this.post("/playlists/monitor", { uuid, name, frequency, quality, source, extra_config, use_playlist_folder });
     }
 
     removeMonitoredPlaylist(uuid) {

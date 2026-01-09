@@ -111,7 +111,10 @@ export function MonitoredList() {
                                                 playlist.uuid,
                                                 playlist.name,
                                                 newFreq,
-                                                playlist.quality
+                                                playlist.quality,
+                                                playlist.source,
+                                                playlist.extra_config,
+                                                playlist.use_playlist_folder
                                             ).then(() => {
                                                 addToast("Frequency updated", "success");
                                                 fetchPlaylists(); // Refresh to be sure
