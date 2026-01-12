@@ -279,7 +279,57 @@ class TidalAPIClient:
         return self._make_request("/playlist/", {"id": playlist_id}, operation="get_playlist")
 
     def get_playlist_tracks(self, playlist_id: str) -> Optional[Dict]:
-        return self._make_request("/playlist/", {"id": playlist_id}, operation="get_playlist_tracks")
+        all_items = []
+        offset = 0
+        limit = 100
+        base_response = None
+        
+        while True:
+            params = {"id": playlist_id, "offset": offset, "limit": limit}
+            data = self._make_request("/playlist/", params, operation="get_playlist_tracks")
+            
+            if not data:
+                break
+                
+            # Store first page metadata
+            if not base_response and isinstance(data, dict):
+                base_response = data
+            
+            # Extract items
+            items = []
+            if isinstance(data, list):
+                items = data
+            elif isinstance(data, dict):
+                items = data.get('items', [])
+                # Fallback for nested tracks structure
+                if not items and 'tracks' in data:
+                     tracks = data['tracks']
+                     items = tracks.get('items', []) if isinstance(tracks, dict) else tracks
+            
+            if not items:
+                break
+                
+            all_items.extend(items)
+            
+            if len(items) < limit or len(all_items) >= 10000:
+                if len(all_items) >= 10000:
+                    logger.warning(f"Playlist {playlist_id} truncated at 10000 tracks")
+                break
+                
+            offset += limit
+        
+        # Return merged result
+        if base_response:
+            # Update item counts and list
+            base_response['items'] = all_items
+            base_response['totalNumberOfItems'] = len(all_items)
+            # Ensure nested tracks count is updated if it exists
+            if 'tracks' in base_response and isinstance(base_response['tracks'], dict):
+                base_response['tracks']['items'] = all_items
+                base_response['tracks']['totalNumberOfItems'] = len(all_items)
+            return base_response
+            
+        return {'items': all_items, 'totalNumberOfItems': len(all_items)}
 
     def get_artist_albums(self, artist_id: int) -> Optional[Dict]:
         return self._make_request(f"/artist/{artist_id}/albums", operation="get_artist_albums")

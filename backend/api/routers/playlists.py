@@ -18,6 +18,7 @@ class MonitorPlaylistRequest(BaseModel):
     quality: Literal["LOW", "HIGH", "LOSSLESS", "HI_RES"] = "LOSSLESS"
     source: Literal["tidal", "listenbrainz"] = "tidal"
     extra_config: Optional[Dict[str, Any]] = None
+    use_playlist_folder: bool = False
 
 class DeleteFilesRequest(BaseModel):
     files: List[str]
@@ -57,7 +58,8 @@ async def monitor_playlist(
             request.frequency, 
             request.quality,
             request.source,
-            request.extra_config
+            request.extra_config,
+            request.use_playlist_folder
         )
         
         # Start initial sync in background only if new
