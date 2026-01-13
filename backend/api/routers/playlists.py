@@ -62,6 +62,15 @@ async def monitor_playlist(
             request.use_playlist_folder
         )
         
+        # Auto-configure frequency for ListenBrainz Weekly playlists
+        if request.source == "listenbrainz" and request.frequency == "manual" and request.extra_config:
+            lb_type = request.extra_config.get('lb_type')
+            if lb_type in ['weekly-jams', 'weekly-exploration']:
+                logger.info(f"Auto-setting frequency to 'weekly' for ListenBrainz playlist {request.name} ({lb_type})")
+                playlist.sync_frequency = 'weekly'
+                playlist_manager._save_state()
+
+        
         # Start initial sync in background only if new
         if created:
             logger.info(f"New playlist monitored {request.uuid}, triggering initial sync.")
