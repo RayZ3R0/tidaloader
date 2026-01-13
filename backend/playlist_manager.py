@@ -634,6 +634,39 @@ class PlaylistManager:
 
              except Exception as e:
                  logger.error(f"Error generating LB cover: {e}")
+             except Exception as e:
+                 logger.error(f"Error generating LB cover: {e}")
+        elif playlist.source == 'spotify':
+            # Spotify Logic
+            logger.info(f"Downloading cover for Spotify playlist {playlist.name}...")
+            
+            # 1. Try to get image from extra_config (passed from frontend search)
+            image_url = None
+            if playlist.extra_config and 'image_url' in playlist.extra_config:
+                image_url = playlist.extra_config['image_url']
+                logger.info(f"Using provided Spotify cover URL: {image_url}")
+            
+            # 2. If not provided, try to fetch metadata
+            if not image_url:
+                try:
+                    from api.clients.spotify import SpotifyClient
+                    client = SpotifyClient()
+                    
+                    spotify_id = playlist.uuid
+                    if playlist.extra_config and 'spotify_id' in playlist.extra_config:
+                        spotify_id = playlist.extra_config['spotify_id']
+
+                    pl_info = await client.get_playlist_metadata(spotify_id)
+                    await client.close()
+                    
+                    if pl_info and pl_info.image:
+                        image_url = pl_info.image
+                        logger.info(f"Resolved Spotify cover URL: {image_url}")
+                    else:
+                        logger.warning(f"No cover image found for Spotify playlist {playlist.name}")
+
+                except Exception as e:
+                    logger.error(f"Error resolving Spotify cover: {e}")
         else:
              # Tidal Logic
             logger.info(f"Downloading cover for playlist {playlist.name}...")

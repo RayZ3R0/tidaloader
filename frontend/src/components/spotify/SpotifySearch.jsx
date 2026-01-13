@@ -121,7 +121,10 @@ const MonitorModal = ({ playlist, onClose, onAdd }) => {
                 frequency,
                 quality,
                 source: "spotify",
-                extra_config: { spotify_id: playlist.id },
+                extra_config: {
+                    spotify_id: playlist.id,
+                    image_url: playlist.image
+                },
                 use_playlist_folder: usePlaylistFolder
             });
             onClose();
