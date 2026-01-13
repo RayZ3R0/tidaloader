@@ -1,9 +1,119 @@
-import { h } from "preact";
-import { useState } from "preact/hooks";
+import { h, Fragment } from "preact";
+import { useState, useEffect } from "preact/hooks";
 import { api } from "../../api/client";
 import { useToastStore } from "../../stores/toastStore";
 
-const AddModal = ({ playlist, onClose, onAdd }) => {
+function PlaylistCoverImage({ cover, title }) {
+    // Spotify covers are just URLs usually, but let's keep it safe
+    const src = cover || null;
+    if (!src) return (
+        <div class="w-full aspect-square bg-surface-alt rounded-lg mb-2 shadow-sm flex items-center justify-center text-text-muted">
+            <svg class="w-12 h-12 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+            </svg>
+        </div>
+    );
+
+    return (
+        <img
+            src={src}
+            alt={title}
+            loading="lazy"
+            class="w-full aspect-square object-cover rounded-lg mb-2 shadow-sm"
+        />
+    );
+}
+
+const formatDuration = (ms) => {
+    if (!ms) return '--:--';
+    const seconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+};
+
+function PreviewModal({ playlist, onClose }) {
+    const [loading, setLoading] = useState(true);
+    const [tracks, setTracks] = useState([]);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        const loadTracks = async () => {
+            // For Spotify, we don't have a direct "get playlist tracks" endpoint that returns simple JSON 
+            // without triggering the 'generate' process which is heavy. 
+            // However, for the purpose of a preview, we can use the 'generate' endpoint WITHOUT validation (shouldValidate=false)
+            // which is faster and returns the track list.
+            // Ideally we would use the `api.getPlaylist` equivalent but that is for Tidal.
+            // We will reuse `api.generateSpotifyPlaylist` with validation off.
+            try {
+                // Determine URL. searching gives us IDs, we need to reconstruct URL or just pass ID if backend supports it.
+                // The backend `generate_spotify_playlist` expects a URL.
+                const url = `https://open.spotify.com/playlist/${playlist.id}`;
+                const result = await api.generateSpotifyPlaylist(url, false);
+                setTracks(result.tracks || []);
+            } catch (e) {
+                console.error("Preview fetch error:", e);
+                setError(e.message);
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadTracks();
+    }, [playlist]);
+
+    return (
+        <div class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 animate-fadeIn">
+            <div class="bg-surface card w-full max-w-2xl flex flex-col max-h-[85vh] shadow-2xl rounded-xl">
+                <div class="p-6 border-b border-border flex items-center gap-4 bg-surface rounded-t-xl">
+                    {playlist.image && (
+                        <img
+                            src={playlist.image}
+                            class="w-16 h-16 rounded-md shadow-sm object-cover"
+                            alt={playlist.name}
+                        />
+                    )}
+                    <div class="flex-1">
+                        <h2 class="text-xl font-bold text-text">{playlist.name}</h2>
+                        <p class="text-text-muted text-sm">{playlist.trackCount || (tracks.length || '...')} tracks {playlist.owner ? `• by ${playlist.owner}` : ''}</p>
+                    </div>
+                    <button onClick={onClose} class="text-text-muted hover:text-text p-2">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+
+                <div class="flex-1 overflow-y-auto p-0">
+                    {loading ? (
+                        <div class="flex flex-col items-center justify-center py-12 gap-3 text-primary">
+                            <div class="w-8 h-8 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                            <p class="text-sm font-medium">Fetching tracks from Spotify...</p>
+                        </div>
+                    ) : error ? (
+                        <div class="p-8 text-center text-red-500">
+                            <p>Failed to load preview: {error}</p>
+                        </div>
+                    ) : (
+                        <div class="divide-y divide-border-light">
+                            {tracks.map((track, i) => (
+                                <div key={i} class="px-6 py-3 hover:bg-surface-alt/50 flex items-center gap-4 group">
+                                    <span class="text-text-muted text-sm w-6 text-right tabular-nums">{i + 1}</span>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-text font-medium text-sm truncate">{track.title}</p>
+                                        <p class="text-text-muted text-xs truncate">{track.artist} {track.album ? `• ${track.album}` : ''}</p>
+                                    </div>
+                                    <span class="text-text-muted text-xs tabular-nums opacity-0 group-hover:opacity-100 transition-opacity">
+                                        {formatDuration(track.duration_ms || track.duration * 1000)}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+const MonitorModal = ({ playlist, onClose, onAdd }) => {
     const [frequency, setFrequency] = useState("daily");
     const [quality, setQuality] = useState("LOSSLESS");
     const [useFolder, setUseFolder] = useState(true);
@@ -24,7 +134,6 @@ const AddModal = ({ playlist, onClose, onAdd }) => {
             onClose();
         } catch (e) {
             console.error(e);
-            // Error handling done by caller usually, but good to have
         } finally {
             setLoading(false);
         }
@@ -102,7 +211,22 @@ export function SpotifySearch() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [selectedPlaylist, setSelectedPlaylist] = useState(null);
+    const [previewPlaylist, setPreviewPlaylist] = useState(null);
+    const [officialOnly, setOfficialOnly] = useState(false);
+    const [monitoredUuids, setMonitoredUuids] = useState(new Set());
+
     const addToast = useToastStore((state) => state.addToast);
+
+    // Fetch monitored playlists on mount to check status
+    useEffect(() => {
+        api.getMonitoredPlaylists().then(list => {
+            // Store extra_config.spotify_id as the UUID for Spotify playlists
+            // The main 'uuid' in monitored list is the wrapper UUID, but Spotify search returns Spotify IDs.
+            // We need to match based on the stored spotify_id if available, or just check if we can map it.
+            // Actually, in `AddModal` we passed `uuid: playlist.id`, so the MonitoredPlaylist UUID IS the Spotify ID.
+            setMonitoredUuids(new Set(list.map(p => p.uuid)));
+        }).catch(err => console.error("Failed to load monitored status", err));
+    }, []);
 
     const handleSearch = async () => {
         if (!query.trim()) return;
@@ -114,6 +238,9 @@ export function SpotifySearch() {
         try {
             const data = await api.searchSpotifyPlaylists(query);
             setResults(data.items || []);
+            if ((data.items || []).length === 0) {
+                addToast("No playlists found", "info");
+            }
         } catch (err) {
             setError(err.message);
             addToast(`Search failed: ${err.message}`, "error");
@@ -134,36 +261,58 @@ export function SpotifySearch() {
                 config.use_playlist_folder
             );
             addToast(`Started monitoring "${config.name}"`, "success");
-            // Optionally clear search or show success state
+            // Add to local set to update UI instantly
+            setMonitoredUuids(prev => new Set(prev).add(config.uuid));
         } catch (e) {
             addToast(`Failed to add playlist: ${e.message}`, "error");
-            throw e; // Propagate to modal to keep it open or show specific error
+            throw e;
         }
     };
 
+    const displayedResults = officialOnly
+        ? results.filter(p => p.owner === "Spotify")
+        : results;
+
     return (
-        <div class="space-y-6">
-            <div class="flex gap-2">
-                <input
-                    type="text"
-                    value={query}
-                    onInput={(e) => setQuery(e.target.value)}
-                    onKeyPress={(e) => e.key === "Enter" && handleSearch()}
-                    placeholder="Search Spotify Playlists..."
-                    class="input-field flex-1"
-                />
-                <button
-                    onClick={handleSearch}
-                    disabled={loading || !query.trim()}
-                    class="btn-primary px-6"
-                >
-                    {loading ? (
-                        <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                    ) : "Search"}
-                </button>
+        <div class="space-y-4 sm:space-y-6">
+            <div class="flex flex-col gap-3">
+                <div class="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                    <input
+                        type="text"
+                        value={query}
+                        onInput={(e) => setQuery(e.target.value)}
+                        onKeyPress={(e) => e.key === "Enter" && handleSearch()}
+                        placeholder="Search Spotify Playlists..."
+                        class="input-field flex-1 text-sm"
+                    />
+                    <button
+                        onClick={handleSearch}
+                        disabled={loading || !query.trim()}
+                        class="btn-primary flex items-center justify-center gap-2 w-full sm:w-auto text-sm"
+                    >
+                        {loading ? (
+                            <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        ) : "Search"}
+                    </button>
+                </div>
+
+                <div class="flex items-center justify-between sm:justify-start gap-3 bg-surface-alt/50 px-3 py-2 rounded-lg border border-border-light">
+                    <label class="text-xs sm:text-sm font-medium text-text cursor-pointer select-none" onClick={() => setOfficialOnly(!officialOnly)}>
+                        Official Spotify Playlists only
+                    </label>
+                    <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                        <input
+                            type="checkbox"
+                            checked={officialOnly}
+                            onChange={(e) => setOfficialOnly(e.target.checked)}
+                            class="sr-only peer"
+                        />
+                        <div class="w-9 h-5 sm:w-11 sm:h-6 bg-surface border border-border peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 sm:after:h-5 sm:after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                    </label>
+                </div>
             </div>
 
             {error && (
@@ -172,46 +321,69 @@ export function SpotifySearch() {
                 </div>
             )}
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {results.map(playlist => (
-                    <div key={playlist.id} class="card p-4 hover:border-primary/50 transition-colors flex flex-col gap-3 group">
-                        <div class="relative aspect-square rounded-lg overflow-hidden bg-surface-alt">
-                            {playlist.image ? (
-                                <img src={playlist.image} alt={playlist.name} class="w-full h-full object-cover" loading="lazy" />
-                            ) : (
-                                <div class="w-full h-full flex items-center justify-center text-text-muted">
-                                    <svg class="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                                    </svg>
+            <div class="grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4">
+                {displayedResults.map(playlist => (
+                    <div key={playlist.id} class="card-hover p-3 flex flex-col gap-2 relative group">
+                        <div
+                            class="relative cursor-pointer hover:opacity-90 transition-opacity"
+                            onClick={() => setPreviewPlaylist(playlist)}
+                        >
+                            <PlaylistCoverImage cover={playlist.image} title={playlist.name} />
+
+                            {monitoredUuids.has(playlist.id) && (
+                                <div class="absolute top-2 right-2 bg-green-500 text-white rounded-full p-1 shadow-md z-10">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
                                 </div>
                             )}
+                        </div>
+
+                        <div class="flex-1 min-w-0">
+                            <h3 class="font-semibold text-text line-clamp-2 leading-tight" title={playlist.name}>{playlist.name}</h3>
+                            <p class="text-xs text-text-muted truncate mt-1">
+                                By {playlist.owner}
+                            </p>
+                            <p class="text-xs text-text-muted mt-0.5">
+                                {playlist.track_count} tracks
+                            </p>
+                        </div>
+
+                        {monitoredUuids.has(playlist.id) ? (
+                            <button
+                                disabled
+                                class="btn-surface w-full mt-2 text-sm py-1.5 opacity-75 cursor-not-allowed border border-border"
+                            >
+                                Already Synced
+                            </button>
+                        ) : (
                             <button
                                 onClick={() => setSelectedPlaylist(playlist)}
-                                class="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center"
+                                class="btn-primary w-full mt-2 text-sm py-1.5"
                             >
-                                <span class="btn-primary transform scale-90 group-hover:scale-100 transition-transform">Add to Monitor</span>
+                                Sync Playlist
                             </button>
-                        </div>
-                        <div>
-                            <h3 class="font-bold text-text truncate">{playlist.name}</h3>
-                            <p class="text-sm text-text-muted truncate">by {playlist.owner}</p>
-                            <p class="text-xs text-text-muted/50 mt-1">{playlist.track_count} tracks</p>
-                        </div>
+                        )}
                     </div>
                 ))}
             </div>
 
-            {!loading && results.length === 0 && query && !error && (
+            {!loading && displayedResults.length === 0 && results.length > 0 && query && (
                 <div class="text-center py-12 text-text-muted">
-                    No results found for "{query}"
+                    No Official Spotify playlists found. Try unchecking the filter.
                 </div>
             )}
 
             {selectedPlaylist && (
-                <AddModal
+                <MonitorModal
                     playlist={selectedPlaylist}
                     onClose={() => setSelectedPlaylist(null)}
                     onAdd={handleAdd}
+                />
+            )}
+
+            {previewPlaylist && (
+                <PreviewModal
+                    playlist={previewPlaylist}
+                    onClose={() => setPreviewPlaylist(null)}
                 />
             )}
         </div>
