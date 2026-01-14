@@ -735,6 +735,46 @@ class PlaylistManager:
                 
         except Exception as e:
             logger.error(f"Jellyfin Cover Sync Error: {e}")
+        except Exception as e:
+            logger.error(f"Jellyfin Cover Sync Error: {e}")
+
+    async def force_sync_covers(self) -> Dict[str, Any]:
+        """
+        Iterates over all monitored playlists and forces an update of the cover art to Jellyfin.
+        Only attempts upload if the local cover file exists.
+        """
+        if not settings.jellyfin_url or not settings.jellyfin_api_key:
+            return {"status": "error", "message": "Jellyfin is not configured"}
+            
+        logger.info("Starting global Jellyfin cover sync...")
+        success_count = 0
+        skipped_count = 0
+        
+        for uuid, playlist in self.playlists.items():
+            try:
+                safe_name = sanitize_path_component(playlist.name)
+                # Logic matches _process_playlist_items: m3u8 and cover are constantly in PLAYLISTS_DIR/{safe_name}
+                playlist_folder = PLAYLISTS_DIR / safe_name
+                cover_path = playlist_folder / f"{safe_name}.jpg"
+                
+                if cover_path.exists():
+                    logger.info(f"Syncing cover for '{playlist.name}'...")
+                    # We await strictly here to avoid flooding Jellyfin API if we have 50 playlists
+                    await self._sync_cover_to_jellyfin(playlist.name, cover_path)
+                    success_count += 1
+                else:
+                    logger.debug(f"No cover found for '{playlist.name}', skipping.")
+                    skipped_count += 1
+                    
+            except Exception as e:
+                logger.error(f"Error syncing cover for {playlist.name}: {e}")
+                
+        logger.info(f"Global Cover Sync Complete: {success_count} synced, {skipped_count} skipped.")
+        return {
+            "status": "success",
+            "synced": success_count,
+            "skipped": skipped_count
+        }
 
     async def _ensure_playlist_cover(self, playlist: MonitoredPlaylist, folder_path: Path, safe_name: str):
         """Downloads the playlist cover image to {PlaylistFolder}/{safe_name}.jpg if missing"""

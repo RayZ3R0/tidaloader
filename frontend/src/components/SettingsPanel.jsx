@@ -27,6 +27,7 @@ export function SettingsPanel() {
     const [isCustomMode, setIsCustomMode] = useState(false);
 
     const [processing, setProcessing] = useState(false);
+    const [syncingCovers, setSyncingCovers] = useState(false);
 
     const PREDEFINED_TEMPLATES = [
         "{Artist}/{Album}/{TrackNumber} - {Title}",
@@ -101,7 +102,27 @@ export function SettingsPanel() {
         } catch (e) {
             setJellyfinStatus('error');
         }
-        setTimeout(() => setJellyfinStatus(null), 3000);
+    };
+
+    const handleSyncCovers = async () => {
+        if (!confirm("This will force-upload cover images for ALL monitored playlists to Jellyfin. This may take a while. Continue?")) {
+            return;
+        }
+
+        setSyncingCovers(true);
+        try {
+            await api.syncJellyfinCovers();
+            // We use a simple alert or toast if available, but here a simple alert is fine or just relying on console.
+            // Ideally we should use addToast from a context, but SettingsPanel doesn't receive it in props currently?
+            // Wait, MainLayout usually provides it. SettingsPanel is likely routed.
+            // I'll just use alert for now or updated button state.
+            alert("Cover sync started in background!");
+        } catch (e) {
+            console.error(e);
+            alert("Failed to start cover sync: " + e.message);
+        } finally {
+            setSyncingCovers(false);
+        }
     };
 
     return (
@@ -280,6 +301,26 @@ export function SettingsPanel() {
                             </button>
                         </div>
                     </div>
+
+                    <div className="pt-4 border-t border-border-light mt-2">
+                        <div className="flex justify-between items-center">
+                            <div className="space-y-1">
+                                <span className="text-sm font-medium text-text block">Force Metadata Sync</span>
+                                <span className="text-xs text-text-muted block">Re-upload all playlist covers to Jellyfin</span>
+                            </div>
+                            <button
+                                onClick={handleSyncCovers}
+                                disabled={!jellyfinUrl || !jellyfinApiKey || syncingCovers}
+                                className={`px-4 py-2 rounded-lg font-medium transition-colors border flex items-center gap-2 ${syncingCovers
+                                    ? 'bg-surface-alt text-text-muted cursor-wait'
+                                    : 'bg-surface-alt hover:bg-surface border-border text-text'
+                                    }`}
+                            >
+                                <svg className={`w-4 h-4 ${syncingCovers ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                {syncingCovers ? "Syncing..." : "Sync Covers"}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -306,6 +347,6 @@ export function SettingsPanel() {
                     )}
                 </button>
             </div>
-        </div>
+        </div >
     );
 }

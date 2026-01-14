@@ -540,6 +540,13 @@ class ApiClient {
     getQueueSettings() {
         return this.get("/queue/settings");
     }
+
+    /**
+     * Force sync covers to Jellyfin
+     */
+    syncJellyfinCovers() {
+        return this.post("/system/jellyfin/sync-covers");
+    }
 }
 
 export const api = new ApiClient();
