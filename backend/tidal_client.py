@@ -2,7 +2,8 @@ import json
 import time
 import logging
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
 
 
@@ -36,6 +37,56 @@ class TidalAPIClient:
         self.success_history = {}
         self.download_status_cache = {}
     
+    def _check_endpoint_connection(self, url: str, timeout: int = 5) -> Tuple[str, bool]:
+        """Check if an endpoint is reachable. Returns (url, is_reachable) tuple."""
+        try:
+            response = requests.head(url, timeout=timeout, allow_redirects=True)
+            if response.status_code < 500:
+                logger.debug(f"✓ Endpoint {url} is reachable (HEAD returned {response.status_code})")
+                return (url, True)
+            
+            response = requests.get(url, timeout=timeout)
+            if response.status_code < 500:
+                logger.debug(f"✓ Endpoint {url} is reachable (GET returned {response.status_code})")
+                return (url, True)
+            
+            logger.warning(f"✗ Endpoint {url} returned server error {response.status_code}")
+            return (url, False)
+            
+        except requests.exceptions.Timeout:
+            logger.warning(f"✗ Endpoint {url} timed out after {timeout}s")
+            return (url, False)
+        except requests.exceptions.ConnectionError:
+            logger.warning(f"✗ Endpoint {url} connection failed")
+            return (url, False)
+        except requests.exceptions.RequestException as e:
+            logger.warning(f"✗ Endpoint {url} check failed: {e}")
+            return (url, False)
+    
+    def _validate_endpoints_parallel(self, urls: List[str], max_workers: int = 10) -> set:
+        """Validate multiple endpoints in parallel. Returns set of reachable URLs."""
+        reachable = set()
+        
+        if not urls:
+            return reachable
+        
+        logger.info(f"Validating {len(urls)} endpoints in parallel (max_workers={max_workers})...")
+        
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {executor.submit(self._check_endpoint_connection, url): url for url in urls}
+            
+            for future in as_completed(futures):
+                try:
+                    url, is_reachable = future.result()
+                    if is_reachable:
+                        reachable.add(url)
+                except Exception as e:
+                    url = futures[future]
+                    logger.warning(f"✗ Endpoint {url} validation failed: {e}")
+        
+        logger.info(f"Validated {len(reachable)}/{len(urls)} endpoints as reachable")
+        return reachable
+    
     def _fetch_endpoints_from_remote(self) -> Optional[List[Dict]]:
         try:
             logger.info(f"Fetching endpoints from {ENDPOINTS_URL}")
@@ -55,9 +106,10 @@ class TidalAPIClient:
             return None
     
     def _parse_endpoints_json(self, data: Dict) -> List[Dict]:
-        endpoints = []
+        """Parse endpoints JSON and validate reachability in parallel."""
+        all_urls = []
+        url_metadata = {}
         priority = 1
-        
 
         api_section = data.get('api', {})
         
@@ -65,26 +117,38 @@ class TidalAPIClient:
             urls = provider_data.get('urls', [])
             
             for url in urls:
-
                 url = url.rstrip('/')
-                
-
-                try:
-                    hostname = url.replace('https://', '').replace('http://', '')
-                    name = hostname.split('.')[0]
-                except Exception:
-                    name = f"endpoint_{len(endpoints)}"
-                
-                endpoints.append({
-                    "name": name,
-                    "url": url,
-                    "priority": priority,
-                    "provider": provider_name
-                })
+                all_urls.append(url)
+                url_metadata[url] = {
+                    'priority': priority,
+                    'provider': provider_name
+                }
             
-
             priority += 1
         
+        reachable_urls = self._validate_endpoints_parallel(all_urls)
+        
+        endpoints = []
+        for url in all_urls:
+            if url not in reachable_urls:
+                logger.info(f"Skipping unreachable endpoint: {url}")
+                continue
+            
+            try:
+                hostname = url.replace('https://', '').replace('http://', '')
+                name = hostname.split('.')[0]
+            except Exception:
+                name = f"endpoint_{len(endpoints)}"
+            
+            meta = url_metadata[url]
+            endpoints.append({
+                "name": name,
+                "url": url,
+                "priority": meta['priority'],
+                "provider": meta['provider']
+            })
+        
+        logger.info(f"Validated {len(endpoints)} reachable endpoints")
         return endpoints
     
     def _load_cached_endpoints(self) -> Optional[List[Dict]]:
