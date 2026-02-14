@@ -28,7 +28,7 @@ export function PlaylistPage({ playlistId, onBack }) {
         result.playlist || {
           id: playlistId,
           title: "Unknown Playlist",
-        }
+        },
       );
 
       const items = result.items || [];
@@ -76,7 +76,7 @@ export function PlaylistPage({ playlistId, onBack }) {
     downloadManager.addToServerQueue(payload).then((res) => {
       addToast(
         `Added ${res.added} track${res.added === 1 ? "" : "s"} to queue`,
-        "success"
+        "success",
       );
     });
   };
@@ -295,4 +295,3 @@ function formatTotalDuration(seconds) {
   }
   return `${minutes} min`;
 }
-

@@ -273,7 +273,7 @@ class TidalAPIClient:
                                     albums_data = data.get('albums', {})
                                     if isinstance(albums_data, dict) and not albums_data.get('items'):
                                         is_empty = True
-                                elif operation == "search_tracks":
+                                elif operation in ["search_tracks", "get_track_metadata"]:
                                     tracks_data = data.get('tracks', {})
                                     if isinstance(tracks_data, dict) and not tracks_data.get('items'):
                                         is_empty = True
@@ -287,7 +287,11 @@ class TidalAPIClient:
                                         is_empty = True
 
                             
-                            if is_empty and operation != "get_track_metadata":
+                            if is_empty:
+                                if operation == "get_track_metadata":
+                                    logger.warning(f"[{idx}/{len(sorted_endpoints)}] {endpoint['name']} returned empty for metadata search. Stopping to avoid cycle delay.")
+                                    return None
+
                                 logger.warning(f"[{idx}/{len(sorted_endpoints)}] {endpoint['name']} returned 200 OK but empty content for {operation}. Trying next...")
                                 continue
                                 
@@ -329,7 +333,8 @@ class TidalAPIClient:
         return self._make_request("/track/", {"id": track_id, "quality": quality}, operation="get_track")
     
     def get_track_metadata(self, track_id: int) -> Optional[Dict]:
-        result = self.search_tracks(str(track_id))
+        # Direct request with specific operation to allow fail-fast logic
+        result = self._make_request("/search/", {"s": str(track_id)}, operation="get_track_metadata")
         if result and result.get('items'):
             for item in result.get('items', []):
                 if item.get('id') == track_id:

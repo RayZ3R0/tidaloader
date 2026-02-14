@@ -15,8 +15,12 @@ export function DownloadQueuePopout() {
   const downloading = useDownloadStore((state) => state.downloading);
   const completed = useDownloadStore((state) => state.completed);
   const failed = useDownloadStore((state) => state.failed);
-  const completedTotal = useDownloadStore((state) => state.completedPagination.total);
-  const serverQueueSettings = useDownloadStore((state) => state.serverQueueSettings);
+  const completedTotal = useDownloadStore(
+    (state) => state.completedPagination.total,
+  );
+  const serverQueueSettings = useDownloadStore(
+    (state) => state.serverQueueSettings,
+  );
 
   const totalInQueue = queue.length + downloading.length;
   const totalActivity = totalInQueue + completedTotal + failed.length;
@@ -167,7 +171,11 @@ export function DownloadQueuePopout() {
               title={isRunning ? "Pause Downloads" : "Start Downloads"}
             >
               {isRunning ? (
-                <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 20 20">
+                <svg
+                  class="w-4 h-4 sm:w-5 sm:h-5"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
                   <path
                     fill-rule="evenodd"
                     d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z"
@@ -175,7 +183,11 @@ export function DownloadQueuePopout() {
                   />
                 </svg>
               ) : (
-                <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 20 20">
+                <svg
+                  class="w-4 h-4 sm:w-5 sm:h-5"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
                   <path
                     fill-rule="evenodd"
                     d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
@@ -212,8 +224,9 @@ export function DownloadQueuePopout() {
                   stroke-width="4"
                   stroke-linecap="round"
                   stroke-dasharray={`${2 * Math.PI * 46}`}
-                  stroke-dashoffset={`${2 * Math.PI * 46 * (1 - currentProgress / 100)
-                    }`}
+                  stroke-dashoffset={`${
+                    2 * Math.PI * 46 * (1 - currentProgress / 100)
+                  }`}
                   class="transition-all duration-300"
                 />
               </svg>
@@ -252,14 +265,17 @@ export function DownloadQueuePopout() {
 
           <div class="fixed inset-0 sm:inset-auto sm:bottom-6 sm:right-6 z-50 flex items-end sm:items-start justify-center sm:justify-end p-0 sm:p-0">
             <div
-              class={`w-full sm:w-[540px] bg-surface rounded-t-2xl sm:rounded-2xl shadow-2xl border-t sm:border border-border-light max-h-[92vh] sm:max-h-[calc(100vh-10rem)] flex flex-col ${isClosing ? "animate-popout-close" : "animate-popout-open"
-                }`}
+              class={`w-full sm:w-[540px] bg-surface rounded-t-2xl sm:rounded-2xl shadow-2xl border-t sm:border border-border-light max-h-[92vh] sm:max-h-[calc(100vh-10rem)] flex flex-col ${
+                isClosing ? "animate-popout-close" : "animate-popout-open"
+              }`}
             >
               <button
                 onClick={handleClose}
                 class="flex items-center justify-between p-3 sm:p-5 border-b border-border-light flex-shrink-0 hover:bg-surface-alt transition-colors rounded-t-2xl sm:rounded-t-2xl group w-full text-left sticky top-0 bg-surface z-10"
               >
-                <h2 class="text-base sm:text-lg font-bold text-text">Download Queue</h2>
+                <h2 class="text-base sm:text-lg font-bold text-text">
+                  Download Queue
+                </h2>
                 <div class="p-1.5 sm:p-2 rounded-lg group-hover:bg-background-alt transition-colors">
                   <svg
                     class="w-5 h-5 text-text-muted group-hover:text-text transition-colors"
@@ -478,7 +494,9 @@ export function DownloadQueuePopout() {
                             </div>
                             <button
                               class="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg transition-colors duration-200 flex-shrink-0"
-                              onClick={() => downloadManager.retryFailed(track.tidal_id)}
+                              onClick={() =>
+                                downloadManager.retryFailed(track.tidal_id)
+                              }
                               title="Retry download"
                             >
                               <svg
@@ -525,7 +543,11 @@ export function DownloadQueuePopout() {
                             />
                           </svg>
                           <span class="text-sm font-semibold text-primary">
-                            Completed: {useDownloadStore.getState().completedPagination.total}
+                            Completed:{" "}
+                            {
+                              useDownloadStore.getState().completedPagination
+                                .total
+                            }
                           </span>
                         </div>
                         <div class="flex items-center gap-2">
@@ -539,8 +561,9 @@ export function DownloadQueuePopout() {
                             Clear View
                           </button>
                           <svg
-                            class={`w-4 h-4 text-primary transition-transform duration-200 ${showCompleted ? "rotate-180" : ""
-                              }`}
+                            class={`w-4 h-4 text-primary transition-transform duration-200 ${
+                              showCompleted ? "rotate-180" : ""
+                            }`}
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -556,9 +579,7 @@ export function DownloadQueuePopout() {
                       </div>
                     </button>
 
-                    {showCompleted && (
-                      <CompletedTracksSection />
-                    )}
+                    {showCompleted && <CompletedTracksSection />}
                   </div>
                 )}
 
@@ -594,13 +615,20 @@ export function DownloadQueuePopout() {
 }
 // Completed Tracks Section with Infinite Scroll
 function CompletedTracksSection() {
-  const completedPagination = useDownloadStore((state) => state.completedPagination);
-  const loadMoreCompleted = useDownloadStore((state) => state.loadMoreCompleted);
+  const completedPagination = useDownloadStore(
+    (state) => state.completedPagination,
+  );
+  const loadMoreCompleted = useDownloadStore(
+    (state) => state.loadMoreCompleted,
+  );
   const scrollRef = useRef(null);
 
   // Load initial tracks when component mounts
   useEffect(() => {
-    if (completedPagination.items.length === 0 && !completedPagination.loading) {
+    if (
+      completedPagination.items.length === 0 &&
+      !completedPagination.loading
+    ) {
       loadMoreCompleted();
     }
   }, []);
@@ -610,7 +638,11 @@ function CompletedTracksSection() {
     const { scrollTop, scrollHeight, clientHeight } = e.target;
     const scrolledToBottom = scrollHeight - scrollTop <= clientHeight + 100; // 100px threshold
 
-    if (scrolledToBottom && !completedPagination.loading && completedPagination.hasMore) {
+    if (
+      scrolledToBottom &&
+      !completedPagination.loading &&
+      completedPagination.hasMore
+    ) {
       loadMoreCompleted();
     }
   };
@@ -642,9 +674,7 @@ function CompletedTracksSection() {
               <p class="text-sm font-medium text-text truncate">
                 {track.title}
               </p>
-              <p class="text-xs text-text-muted truncate">
-                {track.artist}
-              </p>
+              <p class="text-xs text-text-muted truncate">{track.artist}</p>
             </div>
           </div>
         </div>

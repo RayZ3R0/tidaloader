@@ -13,7 +13,8 @@ function extractPlaylistUuid(input) {
   const trimmed = input.trim();
 
   // UUID pattern (8-4-4-4-12 format)
-  const uuidPattern = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
+  const uuidPattern =
+    /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 
   // Check if it's already a raw UUID
   if (uuidPattern.test(trimmed)) {
@@ -23,7 +24,9 @@ function extractPlaylistUuid(input) {
   // Extract UUID from Tidal playlist URLs like:
   // https://tidal.com/playlist/45771c84-041e-454f-94ee-12b4d6a1374e
   // https://listen.tidal.com/playlist/45771c84-041e-454f-94ee-12b4d6a1374e
-  const urlMatch = trimmed.match(/tidal\.com\/(?:browse\/)?playlist\/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/i);
+  const urlMatch = trimmed.match(
+    /tidal\.com\/(?:browse\/)?playlist\/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/i,
+  );
   if (urlMatch) {
     return urlMatch[1];
   }
@@ -100,9 +103,10 @@ export function SearchBar() {
         addToast("No results found for your search", "info");
       } else {
         addToast(
-          `Found ${result.items.length} ${activeType}${result.items.length !== 1 ? "s" : ""
+          `Found ${result.items.length} ${activeType}${
+            result.items.length !== 1 ? "s" : ""
           }`,
-          "success"
+          "success",
         );
       }
     } catch (err) {
@@ -138,7 +142,7 @@ export function SearchBar() {
         artist: r.artist,
         album: r.album,
         cover: r.cover,
-        track_number: r.trackNumber,  // Pass track number from search results
+        track_number: r.trackNumber, // Pass track number from search results
         album_artist: r.albumArtist || r.artist, // Pass album artist
         tidal_exists: true,
         tidal_track_id: r.id,
@@ -146,11 +150,8 @@ export function SearchBar() {
         tidal_album_id: r.tidal_album_id,
       }));
 
-    downloadManager.addToServerQueue(selectedTracks).then(result => {
-      addToast(
-        `Added ${result.added} tracks to download queue`,
-        "success"
-      );
+    downloadManager.addToServerQueue(selectedTracks).then((result) => {
+      addToast(`Added ${result.added} tracks to download queue`, "success");
     });
     setSelected(new Set());
   };
@@ -224,10 +225,11 @@ export function SearchBar() {
         {["track", "album", "artist", "playlist"].map((type) => (
           <label
             key={type}
-            class={`flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-3 px-2 sm:px-4 py-2 sm:py-2 rounded-lg cursor-pointer transition-all duration-200 ${searchType === type
-              ? "bg-primary text-white shadow-sm"
-              : "bg-surface hover:bg-background-alt border border-border"
-              }`}
+            class={`flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-3 px-2 sm:px-4 py-2 sm:py-2 rounded-lg cursor-pointer transition-all duration-200 ${
+              searchType === type
+                ? "bg-primary text-white shadow-sm"
+                : "bg-surface hover:bg-background-alt border border-border"
+            }`}
           >
             <input
               type="radio"
@@ -276,7 +278,9 @@ export function SearchBar() {
                 />
               )}
             </svg>
-            <span class="text-[10px] sm:text-sm font-medium capitalize">{type}</span>
+            <span class="text-[10px] sm:text-sm font-medium capitalize">
+              {type}
+            </span>
           </label>
         ))}
       </div>
@@ -358,8 +362,9 @@ function TrackResults({ results, selected, onToggle, onAddToQueue }) {
         {results.map((track) => (
           <label
             key={track.id}
-            class={`search-result-card ${selected.has(track.id) ? "selected" : ""
-              }`}
+            class={`search-result-card ${
+              selected.has(track.id) ? "selected" : ""
+            }`}
           >
             <input
               type="checkbox"
@@ -536,7 +541,10 @@ function PlaylistResults({ results }) {
             onClick={() => setSelectedPlaylistId(playlist.id)}
           >
             {playlist.cover ? (
-              <PlaylistCoverImage cover={playlist.cover} title={playlist.title} />
+              <PlaylistCoverImage
+                cover={playlist.cover}
+                title={playlist.title}
+              />
             ) : null}
             <div class="space-y-1">
               <p class="text-sm font-semibold text-text line-clamp-2">

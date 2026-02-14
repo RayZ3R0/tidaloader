@@ -37,8 +37,9 @@ export function ArtistPage({ artistId, onBack }) {
       }
 
       console.log(
-        `Loaded: ${result.tracks?.length || 0} tracks, ${result.albums?.length || 0
-        } albums`
+        `Loaded: ${result.tracks?.length || 0} tracks, ${
+          result.albums?.length || 0
+        } albums`,
       );
     } catch (err) {
       console.error("Failed to load artist:", err);
@@ -102,7 +103,7 @@ export function ArtistPage({ artistId, onBack }) {
         album_artist: t.album?.artist?.name, // From Top Tracks album info
       }));
 
-    downloadManager.addToServerQueue(tracks).then(result => {
+    downloadManager.addToServerQueue(tracks).then((result) => {
       addToast(`Added ${result.added} tracks to download queue`, "success");
     });
   };
@@ -143,7 +144,7 @@ export function ArtistPage({ artistId, onBack }) {
 
       addToast(
         `Added ${totalTracks} tracks from ${albumsToDownload.length} albums to queue`,
-        "success"
+        "success",
       );
       setSelectedAlbums(new Set());
     } catch (err) {
@@ -165,7 +166,7 @@ export function ArtistPage({ artistId, onBack }) {
     try {
       addToast(
         `Downloading entire discography (${albums.length} albums)...`,
-        "info"
+        "info",
       );
 
       for (const album of albums) {
@@ -194,7 +195,7 @@ export function ArtistPage({ artistId, onBack }) {
 
       addToast(
         `Added entire discography: ${totalTracks} tracks from ${albums.length} albums`,
-        "success"
+        "success",
       );
     } catch (err) {
       addToast(`Failed to fetch discography: ${err.message}`, "error");
@@ -359,7 +360,9 @@ export function ArtistPage({ artistId, onBack }) {
 
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {topTracks.length > 0 && (
-          <div class={`space-y-4 hidden md:block ${albums.length > 0 ? 'lg:col-span-5' : 'lg:col-span-12'}`}>
+          <div
+            class={`space-y-4 hidden md:block ${albums.length > 0 ? "lg:col-span-5" : "lg:col-span-12"}`}
+          >
             <div class="flex items-center justify-between">
               <h3 class="text-xl font-bold text-text">
                 Top Tracks ({topTracks.length})
@@ -368,22 +371,33 @@ export function ArtistPage({ artistId, onBack }) {
 
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 bg-surface-alt rounded-lg border border-border-light">
               <div class="flex flex-wrap gap-2">
-                <button class="btn-surface text-xs px-3 py-1.5" onClick={selectAllTracks}>
+                <button
+                  class="btn-surface text-xs px-3 py-1.5"
+                  onClick={selectAllTracks}
+                >
                   Select All
                 </button>
-                <button class="btn-surface text-xs px-3 py-1.5" onClick={deselectAllTracks}>
+                <button
+                  class="btn-surface text-xs px-3 py-1.5"
+                  onClick={deselectAllTracks}
+                >
                   Deselect
                 </button>
               </div>
               {selectedTracks.size > 0 && (
-                <button class="btn-primary text-xs px-3 py-1.5" onClick={handleDownloadTracks}>
+                <button
+                  class="btn-primary text-xs px-3 py-1.5"
+                  onClick={handleDownloadTracks}
+                >
                   Add {selectedTracks.size} to Queue
                 </button>
               )}
             </div>
 
             <div class="space-y-4">
-              <div class={`grid gap-2 ${albums.length > 0 ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'}`}>
+              <div
+                class={`grid gap-2 ${albums.length > 0 ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-1" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"}`}
+              >
                 {topTracks.map((track) => {
                   const isSelected = selectedTracks.has(track.id);
                   return (
@@ -392,9 +406,11 @@ export function ArtistPage({ artistId, onBack }) {
                       onClick={() => toggleTrack(track.id)}
                       class={`
                       group relative flex items-center gap-2.5 p-2 rounded-lg transition-all duration-200 cursor-pointer border
-                      ${isSelected
+                      ${
+                        isSelected
                           ? "bg-primary/5 border-primary/30"
-                          : "bg-surface-alt/30 hover:bg-surface-alt border-transparent hover:border-border"}
+                          : "bg-surface-alt/30 hover:bg-surface-alt border-transparent hover:border-border"
+                      }
                     `}
                     >
                       <div class="relative flex-shrink-0">
@@ -406,19 +422,36 @@ export function ArtistPage({ artistId, onBack }) {
                           />
                         ) : (
                           <div class="w-10 h-10 rounded-md bg-surface flex items-center justify-center text-text-muted">
-                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                            <svg
+                              class="w-5 h-5"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
+                              />
                             </svg>
                           </div>
                         )}
                       </div>
 
                       <div class="flex-1 min-w-0 pr-1">
-                        <p class={`text-sm font-semibold truncate leading-tight transition-colors duration-200 ${isSelected ? "text-primary" : "text-text group-hover:text-primary"}`}>
+                        <p
+                          class={`text-sm font-semibold truncate leading-tight transition-colors duration-200 ${isSelected ? "text-primary" : "text-text group-hover:text-primary"}`}
+                        >
                           {track.title}
                         </p>
                         <div class="flex items-center gap-1.5 text-[11px] text-text-muted mt-0.5 leading-tight">
-                          <span class="truncate max-w-[100px]" title={track.album?.title}>{track.album?.title || "Unknown"}</span>
+                          <span
+                            class="truncate max-w-[100px]"
+                            title={track.album?.title}
+                          >
+                            {track.album?.title || "Unknown"}
+                          </span>
                           {track.duration && (
                             <>
                               <span class="text-border">•</span>
@@ -431,19 +464,33 @@ export function ArtistPage({ artistId, onBack }) {
                       {/* Selection Checkmark */}
                       {isSelected && (
                         <div class="flex-shrink-0 text-primary">
-                          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                          <svg
+                            class="w-5 h-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M5 13l4 4L19 7"
+                            />
                           </svg>
                         </div>
                       )}
 
-                      {!isSelected && track.audioQuality && track.audioQuality !== "LOSSLESS" && (
-                        <div class="flex-shrink-0 self-center">
-                          <span class="px-1 py-0.5 bg-surface text-[9px] font-bold text-text-muted uppercase rounded border border-border/50">
-                            {track.audioQuality === "HI_RES" ? "Hi-Res" : "High"}
-                          </span>
-                        </div>
-                      )}
+                      {!isSelected &&
+                        track.audioQuality &&
+                        track.audioQuality !== "LOSSLESS" && (
+                          <div class="flex-shrink-0 self-center">
+                            <span class="px-1 py-0.5 bg-surface text-[9px] font-bold text-text-muted uppercase rounded border border-border/50">
+                              {track.audioQuality === "HI_RES"
+                                ? "Hi-Res"
+                                : "High"}
+                            </span>
+                          </div>
+                        )}
                     </div>
                   );
                 })}
@@ -453,7 +500,9 @@ export function ArtistPage({ artistId, onBack }) {
         )}
 
         {albums.length > 0 && (
-          <div class={`space-y-4 ${topTracks.length > 0 ? 'lg:col-span-7' : 'lg:col-span-12'}`}>
+          <div
+            class={`space-y-4 ${topTracks.length > 0 ? "lg:col-span-7" : "lg:col-span-12"}`}
+          >
             <div class="flex items-center justify-between">
               <h3 class="text-xl font-bold text-text">
                 Albums ({albums.length})
@@ -462,10 +511,16 @@ export function ArtistPage({ artistId, onBack }) {
 
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 bg-surface-alt rounded-lg border border-border-light">
               <div class="flex flex-wrap gap-2">
-                <button class="btn-surface text-xs px-3 py-1.5" onClick={selectAllAlbums}>
+                <button
+                  class="btn-surface text-xs px-3 py-1.5"
+                  onClick={selectAllAlbums}
+                >
                   Select All
                 </button>
-                <button class="btn-surface text-xs px-3 py-1.5" onClick={deselectAllAlbums}>
+                <button
+                  class="btn-surface text-xs px-3 py-1.5"
+                  onClick={deselectAllAlbums}
+                >
                   Deselect
                 </button>
               </div>
@@ -480,7 +535,9 @@ export function ArtistPage({ artistId, onBack }) {
               )}
             </div>
 
-            <div class={`grid gap-4 ${topTracks.length > 0 ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'}`}>
+            <div
+              class={`grid gap-4 ${topTracks.length > 0 ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4" : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"}`}
+            >
               {albums.map((album) => {
                 const isSelected = selectedAlbums.has(album.id);
                 return (
@@ -489,9 +546,11 @@ export function ArtistPage({ artistId, onBack }) {
                     onClick={() => toggleAlbum(album.id)}
                     class={`
                       group relative p-3 rounded-xl cursor-pointer transition-all duration-200 border
-                      ${isSelected
-                        ? "bg-primary/5 border-primary/30 shadow-sm ring-1 ring-primary/20"
-                        : "bg-surface-alt/30 border-transparent hover:bg-surface-alt hover:border-border/50"}
+                      ${
+                        isSelected
+                          ? "bg-primary/5 border-primary/30 shadow-sm ring-1 ring-primary/20"
+                          : "bg-surface-alt/30 border-transparent hover:bg-surface-alt hover:border-border/50"
+                      }
                     `}
                   >
                     <div class="relative w-full aspect-square mb-3">
@@ -508,15 +567,29 @@ export function ArtistPage({ artistId, onBack }) {
                       )}
 
                       {/* Selection Overlay Badge */}
-                      <div class={`
+                      <div
+                        class={`
                         absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center shadow-md transition-all duration-200
-                        ${isSelected
-                          ? "bg-primary text-white scale-100 opacity-100"
-                          : "bg-black/40 text-white/50 scale-90 opacity-0 group-hover:opacity-100"}
-                      `}>
+                        ${
+                          isSelected
+                            ? "bg-primary text-white scale-100 opacity-100"
+                            : "bg-black/40 text-white/50 scale-90 opacity-0 group-hover:opacity-100"
+                        }
+                      `}
+                      >
                         {isSelected ? (
-                          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                          <svg
+                            class="w-4 h-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2.5"
+                              d="M5 13l4 4L19 7"
+                            />
                           </svg>
                         ) : (
                           <div class="w-4 h-4 rounded-full border-2 border-white/50"></div>
@@ -525,23 +598,40 @@ export function ArtistPage({ artistId, onBack }) {
 
                       {/* Inspect Button - Desktop Only */}
                       <div
-                        onClick={(e) => { e.stopPropagation(); setModalAlbum(album); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setModalAlbum(album);
+                        }}
                         class="hidden md:flex absolute bottom-2 left-2 w-8 h-8 rounded-full bg-black/40 hover:bg-primary hover:text-white backdrop-blur-sm items-center justify-center text-white/80 transition-all transform scale-90 hover:scale-100 opacity-0 group-hover:opacity-100 z-10"
                         title="View Tracks"
                       >
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        <svg
+                          class="w-4 h-4"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M4 6h16M4 12h16M4 18h16"
+                          />
                         </svg>
                       </div>
                     </div>
 
                     <div class="space-y-1">
-                      <p class={`text-sm font-semibold line-clamp-2 leading-tight transition-colors ${isSelected ? "text-primary" : "text-text"}`}>
+                      <p
+                        class={`text-sm font-semibold line-clamp-2 leading-tight transition-colors ${isSelected ? "text-primary" : "text-text"}`}
+                      >
                         {album.title}
                       </p>
                       <div class="flex items-center gap-2 text-xs text-text-muted">
                         {album.releaseDate && (
-                          <span>{new Date(album.releaseDate).getFullYear()}</span>
+                          <span>
+                            {new Date(album.releaseDate).getFullYear()}
+                          </span>
                         )}
                         {album.numberOfTracks && (
                           <>
@@ -602,7 +692,7 @@ function AlbumTracksModal({ album, onClose }) {
         const items = result.items || [];
         setTracks(items);
         // Select all by default
-        setSelectedIds(new Set(items.map(t => t.id)));
+        setSelectedIds(new Set(items.map((t) => t.id)));
       } catch (err) {
         addToast(`Failed to load tracks: ${err.message}`, "error");
         onClose();
@@ -622,7 +712,7 @@ function AlbumTracksModal({ album, onClose }) {
 
   const handleDownload = () => {
     const tracksToDownload = tracks
-      .filter(t => selectedIds.has(t.id))
+      .filter((t) => selectedIds.has(t.id))
       .map((t, index) => ({
         tidal_id: t.id,
         title: t.title,
@@ -637,7 +727,7 @@ function AlbumTracksModal({ album, onClose }) {
         album_artist: t.albumArtist || album.artist?.name, // Use backend albumArtist or fallback to album.artist
       }));
 
-    downloadManager.addToServerQueue(tracksToDownload).then(res => {
+    downloadManager.addToServerQueue(tracksToDownload).then((res) => {
       addToast(`Added ${res.added} tracks to queue`, "success");
       onClose();
     });
@@ -646,7 +736,6 @@ function AlbumTracksModal({ album, onClose }) {
   return (
     <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
       <div class="w-full max-w-3xl bg-surface border border-border rounded-xl shadow-2xl flex flex-col max-h-[85vh] animate-scale-up overflow-hidden">
-
         {/* Header */}
         <div class="p-4 border-b border-border/50 flex items-center justify-between bg-surface-alt/50">
           <div class="flex items-center gap-4">
@@ -658,16 +747,33 @@ function AlbumTracksModal({ album, onClose }) {
               />
             )}
             <div>
-              <h3 class="text-lg font-bold text-text line-clamp-1">{album.title}</h3>
+              <h3 class="text-lg font-bold text-text line-clamp-1">
+                {album.title}
+              </h3>
               <p class="text-xs text-text-muted">
                 {tracks.length} tracks
-                {album.releaseDate && !isNaN(new Date(album.releaseDate)) && ` • ${new Date(album.releaseDate).getFullYear()}`}
+                {album.releaseDate &&
+                  !isNaN(new Date(album.releaseDate)) &&
+                  ` • ${new Date(album.releaseDate).getFullYear()}`}
               </p>
             </div>
           </div>
-          <button onClick={onClose} class="p-2 hover:bg-surface-alt rounded-full text-text-muted hover:text-text transition-colors">
-            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          <button
+            onClick={onClose}
+            class="p-2 hover:bg-surface-alt rounded-full text-text-muted hover:text-text transition-colors"
+          >
+            <svg
+              class="w-6 h-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
@@ -676,7 +782,7 @@ function AlbumTracksModal({ album, onClose }) {
         <div class="p-3 border-b border-border/50 flex items-center justify-between bg-surface">
           <div class="flex gap-2">
             <button
-              onClick={() => setSelectedIds(new Set(tracks.map(t => t.id)))}
+              onClick={() => setSelectedIds(new Set(tracks.map((t) => t.id)))}
               class="text-xs font-medium px-3 py-1.5 rounded-md hover:bg-surface-alt text-text transition-colors"
             >
               Select All
@@ -693,8 +799,18 @@ function AlbumTracksModal({ album, onClose }) {
               onClick={handleDownload}
               class="btn-primary text-xs px-4 py-1.5 flex items-center gap-2"
             >
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                />
               </svg>
               Add {selectedIds.size} Tracks
             </button>
@@ -718,9 +834,11 @@ function AlbumTracksModal({ album, onClose }) {
                     onClick={() => toggleTrack(track.id)}
                     class={`
                       flex items-center gap-2 p-2 rounded-lg cursor-pointer border transition-all duration-150
-                      ${isSelected
-                        ? "bg-primary/5 border-primary/30"
-                        : "bg-surface hover:bg-surface-alt border-transparent hover:border-border"}
+                      ${
+                        isSelected
+                          ? "bg-primary/5 border-primary/30"
+                          : "bg-surface hover:bg-surface-alt border-transparent hover:border-border"
+                      }
                     `}
                   >
                     <span class="w-6 text-center text-xs text-text-muted font-medium flex-shrink-0">
@@ -736,30 +854,55 @@ function AlbumTracksModal({ album, onClose }) {
                         />
                       ) : (
                         <div class="w-10 h-10 rounded-md bg-surface-alt flex items-center justify-center text-text-muted">
-                          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                          <svg
+                            class="w-5 h-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
+                            />
                           </svg>
                         </div>
                       )}
                     </div>
 
                     <div class="flex-1 min-w-0">
-                      <p class={`text-sm font-medium truncate ${isSelected ? "text-primary" : "text-text"}`}>
+                      <p
+                        class={`text-sm font-medium truncate ${isSelected ? "text-primary" : "text-text"}`}
+                      >
                         {track.title}
                       </p>
                       <div class="flex items-center gap-2 text-[10px] text-text-muted">
                         <span>{formatDuration(track.duration)}</span>
-                        {track.audioQuality && track.audioQuality !== "LOSSLESS" && (
-                          <span class="px-1 py-0.5 rounded border border-border/50 text-[9px]">
-                            {track.audioQuality}
-                          </span>
-                        )}
+                        {track.audioQuality &&
+                          track.audioQuality !== "LOSSLESS" && (
+                            <span class="px-1 py-0.5 rounded border border-border/50 text-[9px]">
+                              {track.audioQuality}
+                            </span>
+                          )}
                       </div>
                     </div>
 
-                    <div class={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${isSelected ? "bg-primary border-primary text-white" : "border-text-muted/30 text-transparent"}`}>
-                      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                    <div
+                      class={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${isSelected ? "bg-primary border-primary text-white" : "border-text-muted/30 text-transparent"}`}
+                    >
+                      <svg
+                        class="w-3.5 h-3.5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="3"
+                          d="M5 13l4 4L19 7"
+                        />
                       </svg>
                     </div>
                   </div>

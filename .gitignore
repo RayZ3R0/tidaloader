@@ -70,3 +70,5 @@ backend/tidaloader.db
 backend/tidaloader_backup_*.db
 *.db
 *.sqlite
+backend/tidaloader.db-shm
+backend/tidaloader.db-wal

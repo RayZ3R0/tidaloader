@@ -2,7 +2,7 @@ export const releaseNotes = [
     {
         version: "1.4.0",
         date: "2026-02-14",
-        title: "Settings System Overhaul & Multi-User Support",
+        title: "Settings System Overhaul & Multi-User Support + Performance Boost",
         changes: [
             "Major Backend Upgrade: Migrated settings storage from config.json to SQLite for improved reliability and performance.",
             "Multi-User Safety: Implemented optimistic concurrency control with version tracking to prevent conflicts when multiple users modify settings simultaneously.",
@@ -14,6 +14,8 @@ export const releaseNotes = [
             "Database Migration: Automatic one-time migration from config.json to SQLite on first startup with backup creation.",
             "Queue Pagination: Completed tracks now display accurate total counts and support infinite scroll to view all download history (previously limited to 50 items).",
             "Clear View Button: 'Clear View' button now only clears the UI display while preserving all download history in the database.",
+            "Performance Boost: Fixed 11s delay in queue processing by optimizing sticky endpoint logic with fail-fast validation.",
+            "Bug Fix: Resolved issue where download quality setting was ignored on app startup."
         ]
     },
     {

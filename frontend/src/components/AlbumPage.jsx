@@ -49,7 +49,7 @@ export function AlbumPage({ albumId, onBack }) {
           id: albumId,
           title: "Unknown Album",
           artist: { name: "Unknown Artist" },
-        }
+        },
       );
 
       setTracks(result.items || []);
@@ -96,7 +96,7 @@ export function AlbumPage({ albumId, onBack }) {
         artist: t.artist || album?.artist?.name || "Unknown Artist",
         album: album?.title || t.album,
         album_artist: t.albumArtist || album?.artist?.name, // Use backend albumArtist or fallback
-        track_number: t.trackNumber || t.track_number || (index + 1),
+        track_number: t.trackNumber || t.track_number || index + 1,
         cover: album?.cover || t.cover,
         tidal_exists: true,
         tidal_track_id: t.id,
@@ -104,11 +104,8 @@ export function AlbumPage({ albumId, onBack }) {
         tidal_album_id: t.tidal_album_id || album?.id,
       }));
 
-    downloadManager.addToServerQueue(selectedTrackList).then(result => {
-      addToast(
-        `Added ${result.added} tracks to download queue`,
-        "success"
-      );
+    downloadManager.addToServerQueue(selectedTrackList).then((result) => {
+      addToast(`Added ${result.added} tracks to download queue`, "success");
     });
   };
 

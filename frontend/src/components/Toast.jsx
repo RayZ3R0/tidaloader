@@ -14,10 +14,10 @@ export function Toast() {
             toast.type === "success"
               ? "bg-primary/95 border-primary-dark text-white"
               : toast.type === "error"
-              ? "bg-red-500/95 border-red-600 text-white"
-              : toast.type === "warning"
-              ? "bg-secondary/95 border-secondary-dark text-white"
-              : "bg-surface/95 border-border text-text"
+                ? "bg-red-500/95 border-red-600 text-white"
+                : toast.type === "warning"
+                  ? "bg-secondary/95 border-secondary-dark text-white"
+                  : "bg-surface/95 border-border text-text"
           }`}
         >
           <div class="flex-shrink-0 mt-0.5">
