@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
 
 
-ENDPOINTS_URL = "https://raw.githubusercontent.com/EduardPrigoana/hifi-instances/refs/heads/main/instances.json"
+INSTANCES_FILE = Path(__file__).parent / "instances.json"
 
 
 CACHE_TTL = 3600
@@ -87,22 +87,18 @@ class TidalAPIClient:
         logger.info(f"Validated {len(reachable)}/{len(urls)} endpoints as reachable")
         return reachable
     
-    def _fetch_endpoints_from_remote(self) -> Optional[List[Dict]]:
+    def _fetch_endpoints_from_file(self) -> Optional[List[Dict]]:
         try:
-            logger.info(f"Fetching endpoints from {ENDPOINTS_URL}")
-            response = requests.get(ENDPOINTS_URL, timeout=10)
-            response.raise_for_status()
-            data = response.json()
+            logger.info(f"Loading endpoints from {INSTANCES_FILE}")
+            with open(INSTANCES_FILE, 'r') as f:
+                data = json.load(f)
             
             endpoints = self._parse_endpoints_json(data)
-            logger.info(f"Successfully fetched {len(endpoints)} endpoints from remote")
+            logger.info(f"Successfully loaded {len(endpoints)} endpoints from local file")
             return endpoints
             
-        except requests.exceptions.RequestException as e:
-            logger.warning(f"Failed to fetch endpoints from remote: {e}")
-            return None
-        except (json.JSONDecodeError, KeyError) as e:
-            logger.warning(f"Failed to parse remote endpoints JSON: {e}")
+        except Exception as e:
+            logger.warning(f"Failed to load endpoints from local file: {e}")
             return None
     
     def _parse_endpoints_json(self, data: Dict) -> List[Dict]:
@@ -194,7 +190,7 @@ class TidalAPIClient:
             logger.info("Using in-memory cached endpoints")
             return self._endpoints_cache
         
-        endpoints = self._fetch_endpoints_from_remote()
+        endpoints = self._fetch_endpoints_from_file()
         
         if not endpoints:
              endpoints = self._load_cached_endpoints()
