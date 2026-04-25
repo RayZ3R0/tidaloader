@@ -8,7 +8,7 @@ import requests
 
 
 INSTANCES_FILE = Path(__file__).parent / "instances.json"
-
+UPTIME_TRACKER_URL = "https://tidal-uptime.geeked.wtf"
 
 CACHE_TTL = 3600
 
@@ -89,16 +89,54 @@ class TidalAPIClient:
         logger.info(f"Validated {len(reachable)}/{len(urls)} endpoints as reachable")
         return reachable
     
+    def _fetch_endpoints_from_uptime_tracker(self) -> Optional[List[Dict]]:
+        """Fetch live, healthy endpoints from the uptime tracker."""
+        try:
+            logger.info(f"Fetching live endpoints from uptime tracker: {UPTIME_TRACKER_URL}")
+            response = requests.get(UPTIME_TRACKER_URL, timeout=8)
+            response.raise_for_status()
+            data = response.json()
+
+            api_entries = data.get('api', [])
+            if not api_entries:
+                logger.warning("Uptime tracker returned no live API endpoints")
+                return None
+
+            endpoints = []
+            for entry in api_entries:
+                url = entry.get('url', '').rstrip('/')
+                if not url:
+                    continue
+                try:
+                    hostname = url.replace('https://', '').replace('http://', '')
+                    name = hostname.split('.')[0]
+                except Exception:
+                    name = f"endpoint_{len(endpoints)}"
+                endpoints.append({
+                    "name": name,
+                    "url": url,
+                    "priority": 1,
+                    "provider": "uptime-tracker",
+                    "version": entry.get('version'),
+                })
+
+            logger.info(f"Uptime tracker returned {len(endpoints)} live endpoint(s): {[ep['url'] for ep in endpoints]}")
+            return endpoints
+
+        except Exception as e:
+            logger.warning(f"Failed to fetch from uptime tracker: {e}")
+            return None
+
     def _fetch_endpoints_from_file(self) -> Optional[List[Dict]]:
         try:
             logger.info(f"Loading endpoints from {INSTANCES_FILE}")
             with open(INSTANCES_FILE, 'r') as f:
                 data = json.load(f)
-            
+
             endpoints = self._parse_endpoints_json(data)
             logger.info(f"Successfully loaded {len(endpoints)} endpoints from local file")
             return endpoints
-            
+
         except Exception as e:
             logger.warning(f"Failed to load endpoints from local file: {e}")
             return None
@@ -175,16 +213,36 @@ class TidalAPIClient:
         if self._is_cache_valid():
             logger.info("Using in-memory cached endpoints")
             return self._endpoints_cache
-        
-        endpoints = self._fetch_endpoints_from_file()
-        
+
+        # Always merge tracker + file so we never lose coverage.
+        # Tracker entries get priority=1 (tried first, known healthy).
+        # File entries get priority=2 (fallback, deduped by URL).
+        tracker_endpoints = self._fetch_endpoints_from_uptime_tracker() or []
+        file_endpoints = self._fetch_endpoints_from_file() or []
+
+        seen_urls = {ep['url'] for ep in tracker_endpoints}
+        for ep in file_endpoints:
+            if ep['url'] not in seen_urls:
+                ep = ep.copy()
+                ep['priority'] = 2
+                tracker_endpoints.append(ep)
+                seen_urls.add(ep['url'])
+
+        endpoints = tracker_endpoints
+
+        # Fall back to disk cache only if both sources failed entirely
         if not endpoints:
-             endpoints = self._load_cached_endpoints()
-            
+            logger.warning("Both uptime tracker and instances.json unavailable, falling back to disk cache")
+            endpoints = self._load_cached_endpoints() or []
+
         if endpoints:
             self._save_cached_endpoints(endpoints)
-            
-        self._endpoints_cache = endpoints or []
+
+        logger.info(f"Active endpoint pool: {len(endpoints)} endpoints "
+                    f"({sum(1 for e in endpoints if e.get('priority',2)==1)} from tracker, "
+                    f"{sum(1 for e in endpoints if e.get('priority',2)==2)} from file)")
+
+        self._endpoints_cache = endpoints
         self._cache_timestamp = time.time()
         return self._endpoints_cache
     
