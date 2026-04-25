@@ -32,7 +32,9 @@ class TidalAPIClient:
         self.endpoints = self._load_endpoints()
         self.session = requests.Session()
         self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            'Origin': 'https://listen.tidal.com',
+            'Referer': 'https://listen.tidal.com/',
         })
         self.success_history = {}
         self.download_status_cache = {}
@@ -102,49 +104,33 @@ class TidalAPIClient:
             return None
     
     def _parse_endpoints_json(self, data: Dict) -> List[Dict]:
-        """Parse endpoints JSON and validate reachability in parallel."""
-        all_urls = []
-        url_metadata = {}
+        """Parse endpoints JSON into a flat list ordered by provider priority."""
+        endpoints = []
         priority = 1
 
         api_section = data.get('api', {})
-        
+
         for provider_name, provider_data in api_section.items():
             urls = provider_data.get('urls', [])
-            
+
             for url in urls:
                 url = url.rstrip('/')
-                all_urls.append(url)
-                url_metadata[url] = {
-                    'priority': priority,
-                    'provider': provider_name
-                }
-            
+                try:
+                    hostname = url.replace('https://', '').replace('http://', '')
+                    name = hostname.split('.')[0]
+                except Exception:
+                    name = f"endpoint_{len(endpoints)}"
+
+                endpoints.append({
+                    "name": name,
+                    "url": url,
+                    "priority": priority,
+                    "provider": provider_name
+                })
+
             priority += 1
-        
-        reachable_urls = self._validate_endpoints_parallel(all_urls)
-        
-        endpoints = []
-        for url in all_urls:
-            if url not in reachable_urls:
-                logger.info(f"Skipping unreachable endpoint: {url}")
-                continue
-            
-            try:
-                hostname = url.replace('https://', '').replace('http://', '')
-                name = hostname.split('.')[0]
-            except Exception:
-                name = f"endpoint_{len(endpoints)}"
-            
-            meta = url_metadata[url]
-            endpoints.append({
-                "name": name,
-                "url": url,
-                "priority": meta['priority'],
-                "provider": meta['provider']
-            })
-        
-        logger.info(f"Validated {len(endpoints)} reachable endpoints")
+
+        logger.info(f"Loaded {len(endpoints)} endpoints from instances.json")
         return endpoints
     
     def _load_cached_endpoints(self) -> Optional[List[Dict]]:
@@ -298,8 +284,9 @@ class TidalAPIClient:
                         logger.warning(f"[{idx}/{len(sorted_endpoints)}] {endpoint['name']} returned invalid JSON, trying next endpoint")
                         continue
                 else:
-                    logger.warning(f"[{idx}/{len(sorted_endpoints)}] {endpoint['name']} returned unexpected status {response.status_code}")
-            
+                    logger.warning(f"[{idx}/{len(sorted_endpoints)}] {endpoint['name']} returned unexpected status {response.status_code}, trying next endpoint")
+                    continue
+
             except requests.exceptions.Timeout:
                 logger.warning(f"[{idx}/{len(sorted_endpoints)}] {endpoint['name']} timed out after 10s")
                 continue

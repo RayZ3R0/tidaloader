@@ -3,12 +3,7 @@
     "monochrome": {
       "urls": [
         "https://monochrome-api.samidy.com",
-        "https://api.monochrome.tf",
-        "https://ohio-1.monochrome.tf",
-        "https://singapore-1.monochrome.tf",
-        "https://frankfurt-1.monochrome.tf",
-        "https://eu-central.monochrome.tf",
-        "https://us-west.monochrome.tf"
+        "https://api.monochrome.tf"
       ],
       "cors": false
     },
@@ -25,29 +20,21 @@
         "https://vogel.qqdl.site",
         "https://katze.qqdl.site",
         "https://hund.qqdl.site"
-    ],
-      "cors": false
-    },
-    "squid.wtf": {
-      "urls": [
-        "https://triton.squid.wtf"
       ],
       "cors": false
     },
-    "spotisaver": {
+    "kinoplus": {
       "urls": [
-        "https://hifi-one.spotisaver.net",
-        "https://hifi-two.spotisaver.net"
-      ],
-      "cors": false
-    },
-    "community": {
-      "urls": [
-        "https://hfapi.dyamuh.dev",
-        "https://hfapi.aluratech.org",
-        "https://api.studentsneed.help"
+        "https://tidal.kinoplus.online"
       ],
       "cors": false
     }
+  },
+  "ui": {
+    "monochrome": [
+      "https://monochrome.tf",
+      "https://monochrome.samidy.com",
+      "https://lossless.wtf"
+    ]
   }
 }
