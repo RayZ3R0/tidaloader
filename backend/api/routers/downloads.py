@@ -12,7 +12,7 @@ from api.models import DownloadTrackRequest
 from api.settings import DOWNLOAD_DIR, MP3_QUALITY_MAP, OPUS_QUALITY_MAP
 from api.clients import tidal_client
 from api.utils.logging import log_info, log_error, log_warning, log_success, log_step
-from api.utils.extraction import extract_stream_url
+from api.utils.extraction import extract_stream_url, extract_stream_url_with_qobuz_fallback
 from api.services.files import sanitize_path_component
 from api.services.download import download_file_async
 from queue_manager import queue_manager, QueueItem, QUEUE_AUTO_PROCESS, MAX_CONCURRENT_DOWNLOADS
@@ -307,13 +307,19 @@ async def download_track_server_side(
             log_info(f"Album: {metadata.get('album')}")
         
         log_step("2/4", f"Getting stream URL ({source_quality})...")
-        stream_url = extract_stream_url(track_info)
+        stream_result = extract_stream_url_with_qobuz_fallback(track_info, source_quality)
+        stream_url = stream_result.get('url')
+        stream_source = stream_result.get('source', 'unknown')
+        
         if not stream_url:
             if request.track_id in queue_manager._active:
                 del queue_manager._active[request.track_id]
             raise HTTPException(status_code=404, detail="Stream URL not found")
         
-        log_success(f"Stream URL: {stream_url[:60]}...")
+        if stream_source == 'qobuz':
+            log_success(f"Stream URL (Qobuz): {stream_url[:60]}...")
+        else:
+            log_success(f"Stream URL: {stream_url[:60]}...")
         
         download_ext = '.m4a' if source_quality in ['LOW', 'HIGH'] else '.flac'
         if is_mp3_request:
@@ -635,8 +641,42 @@ async def process_queue_item(item: QueueItem):
         is_opus_request = requested_quality in OPUS_QUALITY_MAP
         source_quality = 'LOSSLESS' if is_mp3_request or is_opus_request else requested_quality
         
-        # Get track playback info (stream URL, manifest) from API
+        # Pre-fetch track metadata to get ISRC before attempting playback info.
+        # This lets us fall back to Qobuz if all Tidal endpoints fail.
+        track_metadata = None
+        track_isrc = None
+        try:
+            track_metadata = tidal_client.get_track_metadata(track_id)
+            if track_metadata:
+                track_isrc = track_metadata.get('isrc')
+        except Exception as e:
+            log_warning(f"[Queue] Could not pre-fetch metadata for {track_id}: {e}")
+
         track_info = tidal_client.get_track(track_id, source_quality)
+
+        if not track_info and track_isrc:
+            log_info(f"[Queue] Tidal unavailable, trying Qobuz (ISRC: {track_isrc})...")
+            qobuz_result = tidal_client.get_qobuz_stream_url(track_isrc, source_quality)
+            if qobuz_result and qobuz_result.get('url'):
+                track_info = [
+                    {
+                        'duration': track_metadata.get('duration', 0) if track_metadata else 0,
+                        'id': track_id,
+                        'isrc': track_isrc,
+                        'title': track_metadata.get('title', item.title) if track_metadata else item.title,
+                    },
+                    {
+                        'OriginalTrackUrl': qobuz_result['url'],
+                        'trackId': track_id,
+                        'audioQuality': source_quality,
+                        'source': 'qobuz',
+                        'endpoint': qobuz_result.get('endpoint'),
+                    },
+                ]
+                if qobuz_result.get('rgInfo'):
+                    track_info[1]['replayGain'] = qobuz_result['rgInfo']
+                log_success(f"[Queue] Qobuz stream via {qobuz_result.get('endpoint')}")
+        
         if not track_info:
             raise Exception("Track not found (Playback Info)")
 
@@ -646,10 +686,12 @@ async def process_queue_item(item: QueueItem):
             track_data = track_info 
 
         # Get stream URL with quality fallback for HI_RES/HI_RES_LOSSLESS
-        stream_url = extract_stream_url(track_info)
+        stream_result = extract_stream_url_with_qobuz_fallback(track_info, source_quality)
+        stream_url = stream_result.get('url')
+        stream_source = stream_result.get('source', 'unknown')
         
         # Validate the stream URL returns actual audio content (not XML error)
-        if stream_url and source_quality in ('HI_RES', 'HI_RES_LOSSLESS'):
+        if stream_url and source_quality in ('HI_RES', 'HI_RES_LOSSLESS') and stream_source == 'tidal':
             is_valid = await validate_stream_url(stream_url)
             if not is_valid:
                 log_warning(f"[Queue] {source_quality} stream returns invalid content for {item.title}, falling back to LOSSLESS")
@@ -665,7 +707,9 @@ async def process_queue_item(item: QueueItem):
                     track_data = track_info[0]
                 else:
                     track_data = track_info
-                stream_url = extract_stream_url(track_info)
+                stream_result = extract_stream_url_with_qobuz_fallback(track_info, source_quality)
+                stream_url = stream_result.get('url')
+                stream_source = stream_result.get('source', 'unknown')
 
         metadata = {
             'quality': requested_quality,

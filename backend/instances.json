@@ -30,6 +30,20 @@
       "cors": false
     }
   },
+  "qobuz": {
+    "trypt": {
+      "urls": [
+        "https://trypt-hifi-dl-456461932686.us-west1.run.app"
+      ],
+      "cors": false
+    },
+    "kennyy": {
+      "urls": [
+        "https://qobuz.kennyy.com.br"
+      ],
+      "cors": false
+    }
+  },
   "ui": {
     "monochrome": [
       "https://monochrome.tf",
